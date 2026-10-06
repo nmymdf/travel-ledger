@@ -29,60 +29,6 @@ import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.ZoneId
 
-private fun fmtDate(epochDay: Long) = LocalDate.ofEpochDay(epochDay).toString()
-private fun fmtMoney(v: Double) =
-    "$HOME_CURRENCY " + NumberFormat.getIntegerInstance().format(Math.round(v))
-
-@Composable
-fun AppNav(db: AppDatabase) {
-    val nav = rememberNavController()
-    val factory = TripViewModelFactory(db.tripDao())
-    NavHost(nav, startDestination = "trips") {
-        composable("trips") {
-            val vm: TripListViewModel = viewModel(factory = factory)
-            val trips by vm.trips.collectAsStateWithLifecycle()
-            TripListScreen(
-                trips,
-                onOpen = { nav.navigate("trip/$it") },
-                onAdd = { nav.navigate("trip/new") },
-                onSettings = { nav.navigate("settings") },
-            )
-        }
-        composable("trip/new") {
-            val vm: TripListViewModel = viewModel(factory = factory)
-            TripEditScreen(
-                initial = null,
-                initialMembers = emptyList(),
-                onBack = { nav.popBackStack() },
-                onSave = { trip, members -> vm.create(trip, members); nav.popBackStack() },
-            )
-        }
-        composable("trip/{id}/edit", listOf(navArgument("id") { type = NavType.LongType })) {
-            val id = it.arguments!!.getLong("id")
-            val vm: TripDetailViewModel = viewModel(key = "trip$id", factory = factory.detail(id))
-            val trip by vm.trip.collectAsStateWithLifecycle()
-            val members by vm.members.collectAsStateWithLifecycle()
-            trip?.let { t ->
-                TripEditScreen(
-                    initial = t,
-                    initialMembers = members.map { m -> m.name },
-                    onBack = { nav.popBackStack() },
-                    onSave = { updated, names -> vm.update(updated, names); nav.popBackStack() },
-                )
-            }
-        }
-        composable("trip/{id}", listOf(navArgument("id") { type = NavType.LongType })) {
-            val id = it.arguments!!.getLong("id")
-            val vm: TripDetailViewModel = viewModel(key = "trip$id", factory = factory.detail(id))
-            val trip by vm.trip.collectAsStateWithLifecycle()
-            TripDetailScreen(trip, onBack = { nav.popBackStack() }, onEdit = { nav.navigate("trip/$id/edit") }, onDelete = {
-                vm.delete(); nav.popBackStack()
-            })
-        }
-        composable("settings") { SettingsScreen(onBack = { nav.popBackStack() }) }
-    }
-}
-
 @Composable
 fun TripListScreen(
     trips: List<TripSummary>,
@@ -198,53 +144,5 @@ fun TripEditScreen(
             },
             dismissButton = { TextButton({ picking = false }) { Text("取消") } },
         ) { DateRangePicker(state, Modifier.height(500.dp)) }
-    }
-}
-
-@Composable
-fun TripDetailScreen(trip: Trip?, onBack: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
-    var confirm by remember { mutableStateOf(false) }
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text(trip?.name ?: "") },
-            navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
-            actions = {
-                TextButton(onEdit) { Text("編輯") }
-                TextButton({ confirm = true }) { Text("刪除") }
-            },
-        )
-    }) { pad ->
-        Column(Modifier.padding(pad).padding(16.dp)) {
-            if (trip != null) {
-                Text("${fmtDate(trip.startDate)} ~ ${fmtDate(trip.endDate)}")
-                Text(if (trip.splitEnabled) "分帳:開啟" else "分帳:關閉")
-                Spacer(Modifier.height(16.dp))
-                Text("支出記錄將於階段 2 加入。", style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-    if (confirm) {
-        AlertDialog(
-            onDismissRequest = { confirm = false },
-            title = { Text("刪除旅程?") },
-            text = { Text("此旅程的所有帳目都會被刪除,無法復原。") },
-            confirmButton = { TextButton({ confirm = false; onDelete() }) { Text("刪除") } },
-            dismissButton = { TextButton({ confirm = false }) { Text("取消") } },
-        )
-    }
-}
-
-@Composable
-fun SettingsScreen(onBack: () -> Unit) {
-    Scaffold(topBar = {
-        TopAppBar(
-            title = { Text("設定") },
-            navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
-        )
-    }) { pad ->
-        Column(Modifier.padding(pad).padding(16.dp)) {
-            Text("結算幣別:$HOME_CURRENCY")
-            Text("旅帳 0.1.0", style = MaterialTheme.typography.bodySmall)
-        }
     }
 }

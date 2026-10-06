@@ -15,6 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
+    abstract fun expenseDao(): ExpenseDao
     abstract fun lookupDao(): LookupDao
 
     companion object {
