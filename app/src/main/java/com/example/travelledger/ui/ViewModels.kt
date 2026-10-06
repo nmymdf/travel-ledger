@@ -45,7 +45,11 @@ class TripDetailViewModel(private val db: AppDatabase, private val id: Long) : V
     }
 
     fun delete() {
-        viewModelScope.launch { db.tripDao().deleteTrip(id) }
+        viewModelScope.launch {
+            val cover = db.tripDao().coverPath(id)
+            db.tripDao().deleteTrip(id)
+            CoverStore.delete(cover)
+        }
     }
 
     fun saveRate(currency: String, rate: Double) {
@@ -159,12 +163,15 @@ class LookupViewModel(private val db: AppDatabase) : ViewModel() {
     val categories: StateFlow<List<Category>> = db.lookupDao().observeCategories().stateIn(this, emptyList())
     val methods: StateFlow<List<PaymentMethod>> = db.lookupDao().observePaymentMethods().stateIn(this, emptyList())
 
-    fun addCategory(name: String) = viewModelScope.launch {
-        db.lookupDao().insertCategory(Category(name = name, sortOrder = (categories.value.maxOfOrNull { it.sortOrder } ?: -1) + 1))
+    fun addCategory(name: String, icon: String, color: Int) = viewModelScope.launch {
+        val order = (categories.value.maxOfOrNull { it.sortOrder } ?: -1) + 1
+        db.lookupDao().insertCategory(Category(name = name, sortOrder = order, icon = icon, color = color))
     }
 
-    fun renameCategory(id: Long, name: String) = viewModelScope.launch {
-        categories.value.find { it.id == id }?.let { db.lookupDao().updateCategories(listOf(it.copy(name = name))) }
+    fun updateCategory(id: Long, name: String, icon: String, color: Int) = viewModelScope.launch {
+        categories.value.find { it.id == id }?.let {
+            db.lookupDao().updateCategories(listOf(it.copy(name = name, icon = icon, color = color)))
+        }
     }
 
     fun deleteCategory(id: Long) = viewModelScope.launch { db.lookupDao().deleteCategory(id) }

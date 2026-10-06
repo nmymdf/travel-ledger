@@ -1,5 +1,6 @@
 package com.example.travelledger.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -20,6 +21,8 @@ data class Trip(
     val splitEnabled: Boolean = false,
     val createdAt: Long = System.currentTimeMillis(),
     val archived: Boolean = false,
+    /** Absolute path of the cover image in app-private storage, or null for a generated cover. */
+    val coverPath: String? = null,
 )
 
 @Entity(
@@ -52,6 +55,10 @@ data class Category(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val sortOrder: Int = 0,
+    /** Icon key (see CategoryStyle); empty means "guess from the name". */
+    @ColumnInfo(defaultValue = "") val icon: String = "",
+    /** Palette index (see CategoryStyle); -1 means "guess from the name". */
+    @ColumnInfo(defaultValue = "-1") val color: Int = -1,
 )
 
 @Entity(tableName = "payment_method")

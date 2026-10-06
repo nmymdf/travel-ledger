@@ -14,6 +14,9 @@ class LogicTest {
     @Test fun limitsIntegerDigits() = assertEquals("123456789", keys(*"1234567890".map { it.toString() }.toTypedArray()))
     @Test fun backspace() = assertEquals("1", keys("1", "2", "⌫"))
     @Test fun backspaceOnEmpty() = assertEquals("", keys("⌫"))
+    @Test fun doubleZero() = assertEquals("1200", keys("1", "2", "00"))
+    @Test fun doubleZeroOnEmpty() = assertEquals("", keys("00"))
+    @Test fun clear() = assertEquals("", keys("1", "2", "C"))
 
     @Test fun homeAmountRoundsToTwoDecimals() = assertEquals(1075.0, toHomeAmount(5000.0, 0.215), 0.0)
     @Test fun homeAmountRounding() = assertEquals(0.01, toHomeAmount(1.0, 0.005), 0.0)

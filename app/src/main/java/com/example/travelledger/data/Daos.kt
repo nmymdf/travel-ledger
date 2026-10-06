@@ -14,14 +14,22 @@ data class TripSummary(
     val startDate: Long,
     val endDate: Long,
     val budget: Double?,
+    val coverPath: String?,
     val totalHome: Double,
+    val memberCount: Int,
+    /** Comma-separated foreign currencies used in this trip, or null. */
+    val currencies: String?,
 )
 
 @Dao
 interface TripDao {
     @Query(
-        """SELECT t.id, t.name, t.startDate, t.endDate, t.budget,
-                  COALESCE((SELECT SUM(homeAmount) FROM expense WHERE tripId = t.id), 0) AS totalHome
+        """SELECT t.id, t.name, t.startDate, t.endDate, t.budget, t.coverPath,
+                  COALESCE((SELECT SUM(homeAmount) FROM expense WHERE tripId = t.id), 0) AS totalHome,
+                  (SELECT COUNT(*) FROM member WHERE tripId = t.id) AS memberCount,
+                  (SELECT GROUP_CONCAT(currency) FROM
+                      (SELECT DISTINCT currency FROM expense WHERE tripId = t.id AND currency != 'TWD'
+                       UNION SELECT currency FROM trip_currency_rate WHERE tripId = t.id)) AS currencies
            FROM trip t WHERE t.archived = 0 ORDER BY t.startDate DESC"""
     )
     fun observeSummaries(): Flow<List<TripSummary>>
@@ -62,6 +70,9 @@ interface TripDao {
 
     @Query("DELETE FROM trip WHERE id = :id")
     suspend fun deleteTrip(id: Long)
+
+    @Query("SELECT coverPath FROM trip WHERE id = :id")
+    suspend fun coverPath(id: Long): String?
 }
 
 data class ExpenseRow(
@@ -72,6 +83,8 @@ data class ExpenseRow(
     val rate: Double,
     val homeAmount: Double,
     val categoryName: String?,
+    val categoryIcon: String?,
+    val categoryColor: Int?,
     val paymentMethodName: String?,
     val note: String,
 )
@@ -80,7 +93,8 @@ data class ExpenseRow(
 interface ExpenseDao {
     @Query(
         """SELECT e.id, e.date, e.amount, e.currency, e.rate, e.homeAmount,
-                  c.name AS categoryName, p.name AS paymentMethodName, e.note
+                  c.name AS categoryName, c.icon AS categoryIcon, c.color AS categoryColor,
+                  p.name AS paymentMethodName, e.note
            FROM expense e
            LEFT JOIN category c ON c.id = e.categoryId
            LEFT JOIN payment_method p ON p.id = e.paymentMethodId

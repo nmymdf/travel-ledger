@@ -1,3 +1,7 @@
 <resources>
-    <style name="Theme.TravelLedger" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.TravelLedger" parent="android:Theme.DeviceDefault.DayNight">
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>
