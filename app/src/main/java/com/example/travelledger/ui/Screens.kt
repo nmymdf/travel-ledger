@@ -51,15 +51,31 @@ fun AppNav(db: AppDatabase) {
         composable("trip/new") {
             val vm: TripListViewModel = viewModel(factory = factory)
             TripEditScreen(
+                initial = null,
+                initialMembers = emptyList(),
                 onBack = { nav.popBackStack() },
                 onSave = { trip, members -> vm.create(trip, members); nav.popBackStack() },
             )
+        }
+        composable("trip/{id}/edit", listOf(navArgument("id") { type = NavType.LongType })) {
+            val id = it.arguments!!.getLong("id")
+            val vm: TripDetailViewModel = viewModel(key = "trip$id", factory = factory.detail(id))
+            val trip by vm.trip.collectAsStateWithLifecycle()
+            val members by vm.members.collectAsStateWithLifecycle()
+            trip?.let { t ->
+                TripEditScreen(
+                    initial = t,
+                    initialMembers = members.map { m -> m.name },
+                    onBack = { nav.popBackStack() },
+                    onSave = { updated, names -> vm.update(updated, names); nav.popBackStack() },
+                )
+            }
         }
         composable("trip/{id}", listOf(navArgument("id") { type = NavType.LongType })) {
             val id = it.arguments!!.getLong("id")
             val vm: TripDetailViewModel = viewModel(key = "trip$id", factory = factory.detail(id))
             val trip by vm.trip.collectAsStateWithLifecycle()
-            TripDetailScreen(trip, onBack = { nav.popBackStack() }, onDelete = {
+            TripDetailScreen(trip, onBack = { nav.popBackStack() }, onEdit = { nav.navigate("trip/$id/edit") }, onDelete = {
                 vm.delete(); nav.popBackStack()
             })
         }
@@ -108,18 +124,24 @@ fun TripListScreen(
 }
 
 @Composable
-fun TripEditScreen(onBack: () -> Unit, onSave: (Trip, List<String>) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var budget by remember { mutableStateOf("") }
-    var split by remember { mutableStateOf(false) }
-    var membersText by remember { mutableStateOf("") }
-    var start by remember { mutableStateOf(LocalDate.now(ZoneId.systemDefault())) }
-    var end by remember { mutableStateOf(LocalDate.now(ZoneId.systemDefault()).plusDays(4)) }
+fun TripEditScreen(
+    initial: Trip?,
+    initialMembers: List<String>,
+    onBack: () -> Unit,
+    onSave: (Trip, List<String>) -> Unit,
+) {
+    val today = LocalDate.now(ZoneId.systemDefault())
+    var name by remember { mutableStateOf(initial?.name ?: "") }
+    var budget by remember { mutableStateOf(initial?.budget?.let { if (it % 1.0 == 0.0) it.toLong().toString() else it.toString() } ?: "") }
+    var split by remember { mutableStateOf(initial?.splitEnabled ?: false) }
+    var membersText by remember { mutableStateOf(initialMembers.joinToString(", ")) }
+    var start by remember { mutableStateOf(initial?.let { LocalDate.ofEpochDay(it.startDate) } ?: today) }
+    var end by remember { mutableStateOf(initial?.let { LocalDate.ofEpochDay(it.endDate) } ?: today.plusDays(4)) }
     var picking by remember { mutableStateOf(false) }
 
     Scaffold(topBar = {
         TopAppBar(
-            title = { Text("新增旅程") },
+            title = { Text(if (initial == null) "新增旅程" else "編輯旅程") },
             navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
         )
     }) { pad ->
@@ -144,7 +166,7 @@ fun TripEditScreen(onBack: () -> Unit, onSave: (Trip, List<String>) -> Unit) {
             Text("所有總計皆以 $HOME_CURRENCY 計算,每筆支出可自選幣別。", style = MaterialTheme.typography.bodySmall)
             Button(
                 onClick = {
-                    val trip = Trip(
+                    val trip = (initial ?: Trip(name = "", startDate = 0, endDate = 0)).copy(
                         name = name.trim(), startDate = start.toEpochDay(), endDate = end.toEpochDay(),
                         budget = budget.toDoubleOrNull(), splitEnabled = split,
                     )
@@ -152,7 +174,7 @@ fun TripEditScreen(onBack: () -> Unit, onSave: (Trip, List<String>) -> Unit) {
                 },
                 enabled = name.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("建立旅程") }
+            ) { Text(if (initial == null) "建立旅程" else "儲存變更") }
         }
     }
 
@@ -180,13 +202,16 @@ fun TripEditScreen(onBack: () -> Unit, onSave: (Trip, List<String>) -> Unit) {
 }
 
 @Composable
-fun TripDetailScreen(trip: Trip?, onBack: () -> Unit, onDelete: () -> Unit) {
+fun TripDetailScreen(trip: Trip?, onBack: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
     var confirm by remember { mutableStateOf(false) }
     Scaffold(topBar = {
         TopAppBar(
             title = { Text(trip?.name ?: "") },
             navigationIcon = { IconButton(onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回") } },
-            actions = { TextButton({ confirm = true }) { Text("刪除") } },
+            actions = {
+                TextButton(onEdit) { Text("編輯") }
+                TextButton({ confirm = true }) { Text("刪除") }
+            },
         )
     }) { pad ->
         Column(Modifier.padding(pad).padding(16.dp)) {

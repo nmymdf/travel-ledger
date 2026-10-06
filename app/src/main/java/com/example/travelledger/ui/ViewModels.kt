@@ -3,6 +3,7 @@ package com.example.travelledger.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.travelledger.data.Member
 import com.example.travelledger.data.Trip
 import com.example.travelledger.data.TripDao
 import com.example.travelledger.data.TripSummary
@@ -23,6 +24,13 @@ class TripListViewModel(private val dao: TripDao) : ViewModel() {
 class TripDetailViewModel(private val dao: TripDao, private val id: Long) : ViewModel() {
     val trip: StateFlow<Trip?> =
         dao.observeTrip(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val members: StateFlow<List<Member>> =
+        dao.observeMembers(id).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun update(trip: Trip, memberNames: List<String>) {
+        viewModelScope.launch { dao.updateTripWithMembers(trip, memberNames) }
+    }
 
     fun delete() {
         viewModelScope.launch { dao.deleteTrip(id) }

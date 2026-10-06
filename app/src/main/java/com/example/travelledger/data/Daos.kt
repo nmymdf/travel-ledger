@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
 data class TripSummary(
@@ -38,6 +39,24 @@ interface TripDao {
         val id = insertTrip(trip)
         insertMembers(memberNames.map { Member(tripId = id, name = it) })
         return id
+    }
+
+    @Query("SELECT * FROM member WHERE tripId = :tripId ORDER BY id")
+    suspend fun getMembers(tripId: Long): List<Member>
+
+    @Query("DELETE FROM member WHERE id = :id")
+    suspend fun deleteMember(id: Long)
+
+    @Update suspend fun updateTrip(trip: Trip)
+
+    /** Keeps existing members that still appear by name so expense references stay valid. */
+    @Transaction
+    suspend fun updateTripWithMembers(trip: Trip, memberNames: List<String>) {
+        updateTrip(trip)
+        val existing = getMembers(trip.id)
+        existing.filter { it.name !in memberNames }.forEach { deleteMember(it.id) }
+        val kept = existing.map { it.name }.toSet()
+        insertMembers(memberNames.filter { it !in kept }.map { Member(tripId = trip.id, name = it) })
     }
 
     @Query("DELETE FROM trip WHERE id = :id")
