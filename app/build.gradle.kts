@@ -19,7 +19,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Personal-use app: sign with the debug key so the release APK installs directly.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
