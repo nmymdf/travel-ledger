@@ -7,15 +7,17 @@ plugins {
 }
 
 android {
-    namespace = "com.example.travelledger"
+    namespace = "com.archiekuo.travelledger"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.travelledger"
+        applicationId = "com.archiekuo.travelledger"
         minSdk = 29
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        // Personal phone is 64-bit ARM; keeps the bundled OCR native libraries small.
+        ndk { abiFilters += "arm64-v8a" }
+        versionCode = 4
+        versionName = "0.4.0"
     }
 
     buildTypes {
@@ -58,9 +60,18 @@ dependencies {
     implementation(libs.androidx.compose.material.icons)
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    // On-device text recognition, models bundled in the APK.
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.mlkit:text-recognition-chinese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-japanese:16.0.1")
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+    implementation("androidx.exifinterface:exifinterface:1.3.7")
+
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }
