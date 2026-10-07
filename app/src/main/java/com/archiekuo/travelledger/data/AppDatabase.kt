@@ -10,15 +10,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         Trip::class, TripCurrencyRate::class, Member::class, Category::class,
-        PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class,
+        PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class, PlanItem::class,
     ],
-    version = 3,
+    version = 4,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
     abstract fun expenseDao(): ExpenseDao
     abstract fun lookupDao(): LookupDao
     abstract fun photoDao(): PhotoDao
+    abstract fun planDao(): PlanDao
 
     companion object {
         /** v2: trip cover photo, category icon and color. */
@@ -40,9 +41,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v4: itinerary items, and expenses can point at the item they were spent on. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `plan_item` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `tripId` INTEGER NOT NULL, `title` TEXT NOT NULL,
+                        `categoryId` INTEGER, `date` INTEGER, `minuteOfDay` INTEGER, `status` TEXT NOT NULL,
+                        `reservation` TEXT NOT NULL, `reservationNote` TEXT NOT NULL, `location` TEXT NOT NULL,
+                        `estCost` REAL, `note` TEXT NOT NULL, `createdAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`tripId`) REFERENCES `trip`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"""
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_plan_item_tripId` ON `plan_item` (`tripId`)")
+                db.execSQL("ALTER TABLE expense ADD COLUMN planItemId INTEGER")
+            }
+        }
+
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "travel-ledger.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         listOf("吃", "交通", "購物", "住宿", "景點", "其他").forEachIndexed { i, n ->

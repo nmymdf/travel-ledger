@@ -30,9 +30,6 @@ import androidx.compose.ui.unit.dp
 import com.archiekuo.travelledger.data.HOME_CURRENCY
 import com.archiekuo.travelledger.data.Trip
 import com.archiekuo.travelledger.data.TripCurrencyRate
-import com.archiekuo.travelledger.logic.CoverCandidate
-import com.archiekuo.travelledger.logic.CoverSearch
-import kotlinx.coroutines.delay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -61,26 +58,13 @@ fun FieldInput(
     )
 }
 
-/** Cover suggestions: null = not searched, empty = nothing found / offline. */
-sealed interface CoverResults {
-    data object Idle : CoverResults
-    data object Loading : CoverResults
-    data class Found(val keyword: String, val items: List<CoverCandidate>) : CoverResults
-}
-
-private fun LocalDate.utcMillis() = atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli()
-private fun Long.utcDate() = Instant.ofEpochMilli(this).atZone(ZoneOffset.UTC).toLocalDate()
-
 @Composable
 fun TripEditScreen(
     initial: Trip?,
     initialMembers: List<String>,
     initialRates: List<TripCurrencyRate>,
     coverPath: String?,
-    coverResults: CoverResults,
     coverBusy: Boolean,
-    onSearchCovers: (String) -> Unit,
-    onPickCandidate: (CoverCandidate) -> Unit,
     onPickCover: () -> Unit,
     onBack: () -> Unit,
     onSave: (Trip, List<String>, List<TripCurrencyRate>) -> Unit,
@@ -93,21 +77,9 @@ fun TripEditScreen(
     val rates = remember { mutableStateListOf<Pair<String, String>>().apply { addAll(initialRates.map { it.currency to fmtNumber(it.rate) }) } }
     var start by rememberSaveable { mutableStateOf(initial?.startDate ?: today.toEpochDay()) }
     var end by rememberSaveable { mutableStateOf(initial?.endDate ?: today.plusDays(4).toEpochDay()) }
-    var pickingDates by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf<String?>(null) } // "start" or "end"
     var addingMember by remember { mutableStateOf(false) }
     var addingCurrency by remember { mutableStateOf(false) }
-    var editingKeyword by remember { mutableStateOf(false) }
-
-    // New trip without a cover: look for photos once the name settles.
-    if (coverPath == null && initial?.coverPath == null) {
-        LaunchedEffect(name) {
-            val k = CoverSearch.keyword(name)
-            if (k.isNotEmpty()) {
-                delay(900)
-                onSearchCovers(k)
-            }
-        }
-    }
 
     fun save() {
         val trip = (initial ?: Trip(name = "", startDate = 0, endDate = 0)).copy(
@@ -145,24 +117,25 @@ fun TripEditScreen(
                 ) {
                     Icon(Icons.Rounded.PhotoLibrary, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("從相簿選", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                    Text(if (coverPath == null) "從相簿選封面" else "更換封面", color = Color.White, style = MaterialTheme.typography.labelLarge)
                 }
             }
-
-            CoverSuggestions(coverResults, onPick = onPickCandidate, onSearch = { editingKeyword = true }, onRetry = {
-                CoverSearch.keyword(name).takeIf { it.isNotEmpty() }?.let(onSearchCovers)
-            })
 
             FieldBox("旅程名稱") { FieldInput(name, { name = it }, "例如:東京美食之旅") }
 
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FieldBox("出發", Modifier.weight(1f), onClick = { pickingDates = true }, trailing = { CalendarIcon() }) {
-                    Text(fmtDate(start), style = MaterialTheme.typography.bodyLarge)
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                FieldBox("出發", Modifier.weight(1f).fillMaxHeight(), onClick = { picking = "start" }, trailing = { CalendarIcon() }) {
+                    Text(fmtShortDate(start), style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 }
-                FieldBox("回程 · 共 ${end - start + 1} 天", Modifier.weight(1f), onClick = { pickingDates = true }, trailing = { CalendarIcon() }) {
-                    Text(fmtDate(end), style = MaterialTheme.typography.bodyLarge)
+                FieldBox("回程", Modifier.weight(1f).fillMaxHeight(), onClick = { picking = "end" }, trailing = { CalendarIcon() }) {
+                    Text(fmtShortDate(end), style = MaterialTheme.typography.titleMedium, maxLines = 1)
                 }
             }
+            Text(
+                "${LocalDate.ofEpochDay(start).year} 年 · 共 ${end - start + 1} 天",
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 4.dp, top = 0.dp),
+            )
 
             SectionHeader("旅行成員 · ${members.size} 人")
             members.plus("+").chunked(2).forEach { pair ->
@@ -223,26 +196,17 @@ fun TripEditScreen(
         }
     }
 
-    if (pickingDates) {
-        val state = rememberDateRangePickerState(
-            initialSelectedStartDateMillis = LocalDate.ofEpochDay(start).utcMillis(),
-            initialSelectedEndDateMillis = LocalDate.ofEpochDay(end).utcMillis(),
-        )
-        DatePickerDialog(
-            onDismissRequest = { pickingDates = false },
-            confirmButton = {
-                TextButton({
-                    val s = state.selectedStartDateMillis
-                    val e = state.selectedEndDateMillis ?: s
-                    if (s != null && e != null) {
-                        start = s.utcDate().toEpochDay()
-                        end = e.utcDate().toEpochDay()
-                    }
-                    pickingDates = false
-                }) { Text("確定") }
-            },
-            dismissButton = { TextButton({ pickingDates = false }) { Text("取消") } },
-        ) { DateRangePicker(state, Modifier.height(500.dp), title = { Text("選擇旅程日期", Modifier.padding(start = 24.dp, top = 16.dp)) }) }
+    when (picking) {
+        "start" -> DayPickerDialog("出發日期", start, onDismiss = { picking = null }) { d ->
+            // Keep the trip length when the departure moves.
+            end = d + (end - start).coerceAtLeast(0)
+            start = d
+            picking = null
+        }
+        "end" -> DayPickerDialog("回程日期", end, minDay = start, onDismiss = { picking = null }) { d ->
+            end = d
+            picking = null
+        }
     }
     if (addingMember) {
         TextInputDialog("新增成員", "名字", onDismiss = { addingMember = false }) { n ->
@@ -254,54 +218,6 @@ fun TripEditScreen(
         CurrencyDialog("", { addingCurrency = false }) { c ->
             if (c != HOME_CURRENCY && rates.none { it.first == c }) rates.add(c to "")
             addingCurrency = false
-        }
-    }
-    if (editingKeyword) {
-        TextInputDialog("用關鍵字找封面", "例如:京都、Kyoto", initial = CoverSearch.keyword(name), onDismiss = { editingKeyword = false }) { k ->
-            onSearchCovers(k); editingKeyword = false
-        }
-    }
-}
-
-@Composable
-private fun CoverSuggestions(results: CoverResults, onPick: (CoverCandidate) -> Unit, onSearch: () -> Unit, onRetry: () -> Unit) {
-    if (results == CoverResults.Idle) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("推薦封面", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-            TextButton(onSearch) { Text("用關鍵字找") }
-        }
-        return
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                if (results is CoverResults.Found && results.keyword.isNotEmpty()) "推薦封面 · ${results.keyword}" else "推薦封面",
-                style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
-            )
-            TextButton(onSearch) { Text("換關鍵字") }
-        }
-        when (results) {
-            CoverResults.Loading -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                repeat(3) { Box(Modifier.weight(1f).aspectRatio(1.4f).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceVariant)) }
-            }
-            is CoverResults.Found -> if (results.items.isEmpty()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("找不到圖片或沒有網路", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                    TextButton(onRetry) { Text("重試") }
-                }
-            } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    results.items.forEach { c ->
-                        val img by rememberRemoteImage(c.previewUrl)
-                        Box(
-                            Modifier.weight(1f).aspectRatio(1.4f).clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant).clickable { onPick(c) },
-                        ) { img?.let { Image(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) } }
-                    }
-                    repeat(3 - results.items.size) { Spacer(Modifier.weight(1f)) }
-                }
-            }
-            CoverResults.Idle -> Unit
         }
     }
 }

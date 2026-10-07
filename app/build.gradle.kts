@@ -16,8 +16,8 @@ android {
         targetSdk = 35
         // Personal phone is 64-bit ARM; keeps the bundled OCR native libraries small.
         ndk { abiFilters += "arm64-v8a" }
-        versionCode = 4
-        versionName = "0.4.0"
+        versionCode = 5
+        versionName = "0.5.0"
     }
 
     buildTypes {
@@ -73,5 +73,4 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20240303")
 }

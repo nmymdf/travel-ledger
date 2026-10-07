@@ -103,6 +103,7 @@ data class ExpenseRow(
     val paymentMethodName: String?,
     val note: String,
     val thumbPath: String?,
+    val planItemId: Long?,
 )
 
 /** A previously used expense title and the category it was last filed under. */
@@ -114,7 +115,7 @@ interface ExpenseDao {
         """SELECT e.id, e.date, e.minuteOfDay, e.title, e.amount, e.currency, e.rate, e.homeAmount,
                   e.categoryId, c.name AS categoryName, c.icon AS categoryIcon, c.color AS categoryColor,
                   p.name AS paymentMethodName, e.note,
-                  (SELECT path FROM photo WHERE expenseId = e.id ORDER BY id LIMIT 1) AS thumbPath
+                  (SELECT path FROM photo WHERE expenseId = e.id ORDER BY id LIMIT 1) AS thumbPath, e.planItemId
            FROM expense e
            LEFT JOIN category c ON c.id = e.categoryId
            LEFT JOIN payment_method p ON p.id = e.paymentMethodId
@@ -150,6 +151,62 @@ interface ExpenseDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertRate(rate: TripCurrencyRate)
+}
+
+/** A plan item with its category look and what has been spent on it so far. */
+data class PlanRow(
+    val id: Long,
+    val title: String,
+    val categoryId: Long?,
+    val categoryName: String?,
+    val categoryIcon: String?,
+    val categoryColor: Int?,
+    val date: Long?,
+    val minuteOfDay: Int?,
+    val status: String,
+    val reservation: String,
+    val reservationNote: String,
+    val location: String,
+    val estCost: Double?,
+    val spent: Double,
+)
+
+@Dao
+interface PlanDao {
+    @Query(
+        """SELECT pl.id, pl.title, pl.categoryId, c.name AS categoryName, c.icon AS categoryIcon, c.color AS categoryColor,
+                  pl.date, pl.minuteOfDay, pl.status, pl.reservation, pl.reservationNote, pl.location, pl.estCost,
+                  COALESCE((SELECT SUM(homeAmount) FROM expense WHERE planItemId = pl.id), 0) AS spent
+           FROM plan_item pl LEFT JOIN category c ON c.id = pl.categoryId
+           WHERE pl.tripId = :tripId
+           ORDER BY pl.date IS NULL, pl.date, pl.minuteOfDay IS NULL, pl.minuteOfDay, pl.id"""
+    )
+    fun observeRows(tripId: Long): Flow<List<PlanRow>>
+
+    @Query("SELECT * FROM plan_item WHERE id = :id")
+    suspend fun get(id: Long): PlanItem?
+
+    @Insert suspend fun insert(item: PlanItem): Long
+    @Insert suspend fun insertAll(items: List<PlanItem>)
+    @Update suspend fun update(item: PlanItem)
+
+    @Query("UPDATE plan_item SET status = :status WHERE id = :id")
+    suspend fun setStatus(id: Long, status: String)
+
+    @Query("UPDATE plan_item SET date = :date WHERE id = :id")
+    suspend fun setDate(id: Long, date: Long?)
+
+    @Query("UPDATE expense SET planItemId = NULL WHERE planItemId = :id")
+    suspend fun unlinkExpenses(id: Long)
+
+    @Query("DELETE FROM plan_item WHERE id = :id")
+    suspend fun deleteRow(id: Long)
+
+    @Transaction
+    suspend fun delete(id: Long) {
+        unlinkExpenses(id)
+        deleteRow(id)
+    }
 }
 
 @Dao

@@ -44,6 +44,7 @@ data class ExpenseActions(
     val key: (String) -> Unit = {},
     val currency: (String) -> Unit = {},
     val pickSuggestion: (TitleSuggestion) -> Unit = {},
+    val takeReceipt: () -> Unit = {},
     val takePhoto: () -> Unit = {},
     val pickPhoto: () -> Unit = {},
     val removePhoto: (Int) -> Unit = {},
@@ -97,8 +98,9 @@ fun ExpenseEditScreen(
                     Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    NameRow(s, photos.size, processing, suggestions, actions)
-                    if (photos.isNotEmpty()) PhotoStrip(photos, onOpen = { viewing = it }, onAdd = actions.takePhoto)
+                    NameRow(s, suggestions, actions)
+                    PhotoButtons(photos.size, processing, actions)
+                    if (photos.isNotEmpty()) PhotoStrip(photos, onOpen = { viewing = it })
                     receipt?.let { ReceiptCard(it, actions) }
                     CategoryRow(categories, s.categoryId) { id -> actions.edit { it.copy(categoryId = id) } }
                     PaymentRow(methods, s.paymentId) { id -> actions.edit { it.copy(paymentId = id) } }
@@ -123,23 +125,11 @@ fun ExpenseEditScreen(
                 ) { v -> actions.edit { it.copy(rate = v) }; editRate = false }
             }
             if (pickDate) {
-                val st = rememberDatePickerState(
-                    initialSelectedDateMillis = LocalDate.ofEpochDay(s.date).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli(),
-                )
-                DatePickerDialog(
-                    onDismissRequest = { pickDate = false },
-                    confirmButton = {
-                        TextButton({
-                            st.selectedDateMillis?.let { ms ->
-                                val day = Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate().toEpochDay()
-                                actions.edit { it.copy(date = day) }
-                            }
-                            pickDate = false
-                            pickTime = true
-                        }) { Text("下一步:時間") }
-                    },
-                    dismissButton = { TextButton({ pickDate = false }) { Text("取消") } },
-                ) { DatePicker(st) }
+                DayPickerDialog("日期", s.date, confirmText = "下一步:時間", onDismiss = { pickDate = false }) { day ->
+                    actions.edit { it.copy(date = day) }
+                    pickDate = false
+                    pickTime = true
+                }
             }
             if (pickTime) {
                 val m = s.minuteOfDay ?: 12 * 60
@@ -197,63 +187,33 @@ private fun DateTimeChip(s: EditState, onClick: () -> Unit) {
 }
 
 @Composable
-private fun NameRow(
-    s: EditState,
-    photoCount: Int,
-    processing: Boolean,
-    suggestions: List<TitleSuggestion>,
-    actions: ExpenseActions,
-) {
+private fun NameRow(s: EditState, suggestions: List<TitleSuggestion>, actions: ExpenseActions) {
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
-    var cameraMenu by remember { mutableStateOf(false) }
     val cs = MaterialTheme.colorScheme
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box {
-                val canAdd = photoCount < MAX_PHOTOS
-                Box(
-                    Modifier.size(56.dp).clip(RoundedCornerShape(16.dp))
-                        .background(if (canAdd) cs.primaryContainer else cs.surfaceVariant)
-                        .clickable(enabled = canAdd && !processing) { cameraMenu = true },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (processing) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
-                    else Icon(Icons.Rounded.PhotoCamera, "拍照", tint = if (canAdd) cs.primary else ledger.textMuted)
-                }
-                DropdownMenu(cameraMenu, { cameraMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text("拍照(收據自動辨識)") }, leadingIcon = { Icon(Icons.Rounded.PhotoCamera, null) },
-                        onClick = { cameraMenu = false; actions.takePhoto() },
-                    )
-                    DropdownMenuItem(
-                        text = { Text("從相簿選取") }, leadingIcon = { Icon(Icons.Rounded.PhotoLibrary, null) },
-                        onClick = { cameraMenu = false; actions.pickPhoto() },
-                    )
-                }
-            }
+        val shape = RoundedCornerShape(16.dp)
+        Row(
+            Modifier.fillMaxWidth().height(56.dp).clip(shape).background(cs.surfaceContainerLowest)
+                .border(if (focused) 1.5.dp else 1.dp, if (focused) cs.primary else ledger.hairline, shape)
+                .padding(start = 14.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Rounded.Storefront, null, Modifier.size(22.dp), tint = cs.onSurfaceVariant)
             Spacer(Modifier.width(10.dp))
-            val shape = RoundedCornerShape(16.dp)
-            Row(
-                Modifier.weight(1f).height(56.dp).clip(shape).background(cs.surfaceContainerLowest)
-                    .border(if (focused) 1.5.dp else 1.dp, if (focused) cs.primary else ledger.hairline, shape)
-                    .padding(start = 14.dp, end = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                val style = MaterialTheme.typography.titleMedium.copy(color = cs.onSurface)
-                BasicTextField(
-                    s.title, { v -> actions.edit { it.copy(title = v) } }, Modifier.weight(1f),
-                    singleLine = true, textStyle = style, cursorBrush = SolidColor(cs.primary),
-                    interactionSource = interaction,
-                    decorationBox = { inner ->
-                        if (s.title.isEmpty()) Text("店家或項目名稱", style = style.copy(fontWeight = FontWeight.Normal), color = ledger.textMuted)
-                        inner()
-                    },
-                )
-                if (s.title.isNotEmpty()) {
-                    IconButton({ actions.edit { it.copy(title = "") } }, Modifier.size(40.dp)) {
-                        Icon(Icons.Rounded.Cancel, "清除", Modifier.size(20.dp), tint = ledger.textMuted)
-                    }
+            val style = MaterialTheme.typography.titleMedium.copy(color = cs.onSurface)
+            BasicTextField(
+                s.title, { v -> actions.edit { it.copy(title = v) } }, Modifier.weight(1f),
+                singleLine = true, textStyle = style, cursorBrush = SolidColor(cs.primary),
+                interactionSource = interaction,
+                decorationBox = { inner ->
+                    if (s.title.isEmpty()) Text("店家或項目名稱", style = style.copy(fontWeight = FontWeight.Normal), color = ledger.textMuted)
+                    inner()
+                },
+            )
+            if (s.title.isNotEmpty()) {
+                IconButton({ actions.edit { it.copy(title = "") } }, Modifier.size(40.dp)) {
+                    Icon(Icons.Rounded.Cancel, "清除", Modifier.size(20.dp), tint = ledger.textMuted)
                 }
             }
         }
@@ -273,8 +233,44 @@ private fun NameRow(
     }
 }
 
+/** 拍收據 (read it) · 拍照 (memory, no reading) · 相簿 (decide from the photo). */
 @Composable
-private fun PhotoStrip(photos: List<PhotoItem>, onOpen: (Int) -> Unit, onAdd: () -> Unit) {
+private fun PhotoButtons(count: Int, processing: Boolean, actions: ExpenseActions) {
+    val full = count >= MAX_PHOTOS
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PhotoButton("拍收據", Icons.Rounded.Receipt, !full && !processing, Modifier.weight(1f), actions.takeReceipt)
+            PhotoButton("拍照", Icons.Rounded.PhotoCamera, !full && !processing, Modifier.weight(1f), actions.takePhoto)
+            PhotoButton("相簿", Icons.Rounded.PhotoLibrary, !full && !processing, Modifier.weight(1f), actions.pickPhoto)
+        }
+        when {
+            processing -> Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 4.dp, top = 2.dp)) {
+                CircularProgressIndicator(Modifier.size(14.dp), strokeWidth = 2.dp)
+                Spacer(Modifier.width(8.dp))
+                Text("處理照片中…", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            full -> Text("已滿 $MAX_PHOTOS 張", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+        }
+    }
+}
+
+@Composable
+private fun PhotoButton(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier.height(46.dp).clip(shape).background(if (enabled) cs.primaryContainer else cs.surfaceVariant)
+            .clickable(enabled = enabled, onClick = onClick),
+        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, Modifier.size(19.dp), tint = if (enabled) cs.primary else ledger.textMuted)
+        Spacer(Modifier.width(6.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = if (enabled) cs.onPrimaryContainer else ledger.textMuted, maxLines = 1)
+    }
+}
+
+@Composable
+private fun PhotoStrip(photos: List<PhotoItem>, onOpen: (Int) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         photos.forEachIndexed { i, p ->
             Box(Modifier.size(72.dp).clip(RoundedCornerShape(14.dp)).clickable { onOpen(i) }) {
@@ -282,18 +278,6 @@ private fun PhotoStrip(photos: List<PhotoItem>, onOpen: (Int) -> Unit, onAdd: ()
                 img?.let { Image(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
                     ?: Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.surfaceVariant))
                 PhotoTypeBadge(p.type, Modifier.align(Alignment.BottomStart).padding(4.dp))
-            }
-        }
-        if (photos.size < MAX_PHOTOS) {
-            Box(
-                Modifier.size(72.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(14.dp))
-                    .clickable(onClick = onAdd),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Rounded.Add, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("還能 ${MAX_PHOTOS - photos.size} 張", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
             }
         }
     }
@@ -339,7 +323,7 @@ private fun ReceiptCard(g: ReceiptGuess, actions: ExpenseActions) {
 }
 
 @Composable
-private fun CategoryRow(categories: List<Category>, selected: Long?, onSelect: (Long) -> Unit) {
+fun CategoryRow(categories: List<Category>, selected: Long?, onSelect: (Long) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(end = 8.dp)) {
         items(categories, key = { it.id }) { c ->
             val style = categoryStyle(c.name, c.icon, c.color)

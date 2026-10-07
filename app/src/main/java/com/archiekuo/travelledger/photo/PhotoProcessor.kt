@@ -65,10 +65,16 @@ object PhotoProcessor {
 
     /**
      * Recognizes text in the photo at [uri], decides receipt vs memory, and stores a compressed copy.
+     * [mode] forces receipt or memory handling (null decides from the content).
      * [currencyHint] picks the OCR script (JPY → Japanese, KRW → Korean, otherwise Chinese+Latin).
      */
-    suspend fun process(context: Context, uri: Uri, currencyHint: String?): ProcessedPhoto = withContext(Dispatchers.Default) {
+    suspend fun process(context: Context, uri: Uri, currencyHint: String?, mode: String? = null): ProcessedPhoto = withContext(Dispatchers.Default) {
         val full = withContext(Dispatchers.IO) { decode(context, uri, OCR_EDGE) }
+        // "Take a photo" is a memory: skip recognition entirely.
+        if (mode == PhotoType.MEMORY) {
+            val stored = withContext(Dispatchers.IO) { store(context, full, PhotoType.MEMORY) }
+            return@withContext ProcessedPhoto(stored.first, PhotoType.MEMORY, stored.second, stored.third, "", ReceiptGuess(false))
+        }
         val lines = runCatching {
             val recognizer = TextRecognition.getClient(recognizerFor(currencyHint))
             try {
@@ -82,7 +88,15 @@ object PhotoProcessor {
                 recognizer.close()
             }
         }.getOrDefault(emptyList())
-        val guess = ReceiptParser.parse(lines)
+        val parsed = ReceiptParser.parse(lines)
+        // A photo taken with "拍收據" is a receipt even if the layout was hard to read.
+        val guess = if (mode == PhotoType.RECEIPT && !parsed.isReceipt) {
+            val all = lines.joinToString("\n") { it.text }
+            ReceiptGuess(
+                true, ReceiptParser.findStore(lines), ReceiptParser.findTotal(lines),
+                ReceiptParser.findCurrency(all), ReceiptParser.findDate(all), ReceiptParser.findTime(all),
+            )
+        } else parsed
         val type = if (guess.isReceipt) PhotoType.RECEIPT else PhotoType.MEMORY
         val path = withContext(Dispatchers.IO) { store(context, full, type) }
         val text = lines.sortedBy { it.top }.joinToString("\n") { it.text }

@@ -40,6 +40,7 @@ fun TripListScreen(
     onAdd: () -> Unit,
     onSettings: () -> Unit,
     today: LocalDate = LocalDate.now(),
+    version: String = "",
 ) {
     val activeCount = trips.count { !it.ended(today) }
     var filter by rememberSaveable { mutableStateOf(if (activeCount > 0 || trips.isEmpty()) TripFilter.ACTIVE else TripFilter.ALL) }
@@ -55,8 +56,9 @@ fun TripListScreen(
             contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { HomeHeader(onSettings) }
-            item { PillButton("新增旅程", onAdd, icon = Icons.Rounded.Add, height = 50.dp) }
+            // With an active or upcoming trip the list is a switcher; adding is a small "+" in the header.
+            item { HomeHeader(onSettings, onAdd = onAdd.takeIf { activeCount > 0 }, version = version) }
+            if (activeCount == 0) item { PillButton("新增旅程", onAdd, icon = Icons.Rounded.Add, height = 50.dp) }
             if (trips.isNotEmpty()) {
                 item {
                     FilterTabs(
@@ -82,11 +84,19 @@ fun TripListScreen(
 }
 
 @Composable
-private fun HomeHeader(onSettings: () -> Unit) {
+private fun HomeHeader(onSettings: () -> Unit, onAdd: (() -> Unit)?, version: String) {
     Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
         IconTile(Icons.Rounded.Luggage, MaterialTheme.colorScheme.primary, size = 36.dp, corner = 11.dp)
         Spacer(Modifier.width(10.dp))
-        Text("旅帳", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+        Text("旅帳", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f)) {
+            if (version.isNotEmpty()) Text("v$version", style = MaterialTheme.typography.labelMedium, color = ledger.textMuted)
+            AuthorSignature(16)
+        }
+        if (onAdd != null) {
+            FilledTonalIconButton(onAdd) { Icon(Icons.Rounded.Add, "新增旅程") }
+        }
         IconButton(onSettings) { Icon(Icons.Rounded.Settings, "設定") }
     }
 }

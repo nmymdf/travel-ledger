@@ -17,10 +17,14 @@ import com.archiekuo.travelledger.data.Member
 import com.archiekuo.travelledger.data.PaymentMethod
 import com.archiekuo.travelledger.data.Photo
 import com.archiekuo.travelledger.data.PhotoType
+import com.archiekuo.travelledger.data.PlanItem
+import com.archiekuo.travelledger.data.PlanRow
+import com.archiekuo.travelledger.data.PlanStatus
 import com.archiekuo.travelledger.data.TitleSuggestion
 import com.archiekuo.travelledger.data.Trip
 import com.archiekuo.travelledger.data.TripCurrencyRate
 import com.archiekuo.travelledger.data.TripSummary
+import com.archiekuo.travelledger.logic.ParsedPlace
 import com.archiekuo.travelledger.logic.ReceiptGuess
 import com.archiekuo.travelledger.photo.PhotoProcessor
 import kotlinx.coroutines.flow.Flow
@@ -48,8 +52,8 @@ fun currentTrip(trips: List<Trip>, today: LocalDate): Trip? {
 class TripListViewModel(private val db: AppDatabase) : ViewModel() {
     val trips: StateFlow<List<TripSummary>> = db.tripDao().observeSummaries().stateIn(this, emptyList())
 
-    fun create(trip: Trip, members: List<String>, rates: List<TripCurrencyRate>) {
-        viewModelScope.launch { db.tripDao().createTrip(trip, members, rates) }
+    fun create(trip: Trip, members: List<String>, rates: List<TripCurrencyRate>, onCreated: (Long) -> Unit) {
+        viewModelScope.launch { onCreated(db.tripDao().createTrip(trip, members, rates)) }
     }
 
     suspend fun currentTripId(today: LocalDate): Long? = currentTrip(db.tripDao().getTrips(), today)?.id
@@ -60,6 +64,22 @@ class TripDetailViewModel(private val db: AppDatabase, private val id: Long) : V
     val members: StateFlow<List<Member>> = db.tripDao().observeMembers(id).stateIn(this, emptyList())
     val expenses: StateFlow<List<ExpenseRow>> = db.expenseDao().observeRows(id).stateIn(this, emptyList())
     val rates: StateFlow<List<TripCurrencyRate>> = db.expenseDao().observeRates(id).stateIn(this, emptyList())
+    val plans: StateFlow<List<PlanRow>> = db.planDao().observeRows(id).stateIn(this, emptyList())
+    val categories: StateFlow<List<Category>> = db.lookupDao().observeCategories().stateIn(this, emptyList())
+
+    fun setPlanStatus(planId: Long, status: String) = viewModelScope.launch { db.planDao().setStatus(planId, status) }
+
+    fun movePlans(planIds: List<Long>, date: Long?) = viewModelScope.launch { planIds.forEach { db.planDao().setDate(it, date) } }
+
+    /** Pasted lines become unscheduled items (or items on [date]), with a guessed category. */
+    fun addParsed(places: List<ParsedPlace>, date: Long?) = viewModelScope.launch {
+        val byName = categories.value.associateBy { it.name }
+        db.planDao().insertAll(
+            places.map { p ->
+                PlanItem(tripId = id, title = p.title, location = p.location, date = date, categoryId = p.categoryHint?.let { byName[it]?.id })
+            },
+        )
+    }
 
     fun update(trip: Trip, memberNames: List<String>, rates: List<TripCurrencyRate>) {
         viewModelScope.launch { db.tripDao().updateTrip(trip, memberNames, rates) }
@@ -105,6 +125,8 @@ class ExpenseEditViewModel(
     private val tripId: Long,
     private val expenseId: Long?,
     private val saveMemoriesToGallery: Boolean,
+    /** Recording money for this itinerary item: prefill from it and tick it off on save. */
+    private val planItemId: Long? = null,
 ) : ViewModel() {
     var state by mutableStateOf<EditState?>(null)
         private set
@@ -144,11 +166,13 @@ class ExpenseEditViewModel(
             } else {
                 // New expense: default to the previous expense's currency, category and payment method.
                 val last = db.expenseDao().latest(tripId)
+                val plan = planItemId?.let { db.planDao().get(it) }
                 val currency = last?.currency ?: tripRates.keys.firstOrNull() ?: HOME_CURRENCY
                 state = EditState(
+                    title = plan?.title ?: "",
                     currency = currency,
                     rate = rateFor(currency, last),
-                    categoryId = last?.categoryId ?: db.lookupDao().observeCategories().first().firstOrNull()?.id,
+                    categoryId = plan?.categoryId ?: last?.categoryId ?: db.lookupDao().observeCategories().first().firstOrNull()?.id,
                     paymentId = last?.paymentMethodId ?: db.lookupDao().observePaymentMethods().first().firstOrNull()?.id,
                 )
             }
@@ -177,15 +201,16 @@ class ExpenseEditViewModel(
     /** Picking a remembered title also restores the category it was filed under. */
     fun pickSuggestion(s: TitleSuggestion) = edit { it.copy(title = s.title, categoryId = s.categoryId ?: it.categoryId) }
 
-    fun addPhoto(uri: Uri, cleanup: File? = null) {
+    /** [mode]: RECEIPT reads it, MEMORY just keeps it, null decides from the content (gallery picks). */
+    fun addPhoto(uri: Uri, mode: String?, cleanup: File? = null) {
         if (photos.size >= MAX_PHOTOS) return
         processing = true
         viewModelScope.launch {
-            runCatching { PhotoProcessor.process(app, uri, state?.currency?.takeIf { it != HOME_CURRENCY }) }
+            runCatching { PhotoProcessor.process(app, uri, state?.currency?.takeIf { it != HOME_CURRENCY }, mode) }
                 .onSuccess { p ->
                     photos += PhotoItem(null, p.path, p.type, p.text)
                     if (p.text.isNotBlank()) ocrText = listOf(ocrText, p.text).filter { it.isNotBlank() }.joinToString("\n")
-                    if (p.guess.isReceipt && p.guess.hasData) receipt = p.guess
+                    if (p.type == PhotoType.RECEIPT && p.guess.hasData) receipt = p.guess
                 }
             cleanup?.delete()
             processing = false
@@ -243,8 +268,10 @@ class ExpenseEditViewModel(
                 date = s.date, minuteOfDay = s.minuteOfDay, title = s.title.trim(), amount = amount,
                 currency = s.currency, rate = rate, homeAmount = home, categoryId = s.categoryId,
                 paymentMethodId = s.paymentId, note = s.note.trim(), ocrText = ocrText,
+                planItemId = original?.planItemId ?: planItemId,
             )
             val id = if (original == null) dao.insert(e) else { dao.update(e); e.id }
+            if (original == null && planItemId != null) db.planDao().setStatus(planItemId, PlanStatus.DONE)
 
             val photoDao = db.photoDao()
             val keptIds = photos.mapNotNull { it.id }.toSet()
@@ -327,4 +354,55 @@ class LookupViewModel(private val db: AppDatabase) : ViewModel() {
         list.add(to, list.removeAt(from))
         db.lookupDao().updatePaymentMethods(list.mapIndexed { i, m -> m.copy(sortOrder = i) })
     }
+}
+
+/** Editing one itinerary item (new when [planId] is null; may be prefilled from a map share). */
+class PlanEditViewModel(
+    private val db: AppDatabase,
+    private val tripId: Long,
+    private val planId: Long?,
+    initialDate: Long?,
+    shared: ParsedPlace?,
+) : ViewModel() {
+    var item by mutableStateOf<PlanItem?>(null)
+        private set
+    var trip by mutableStateOf<Trip?>(null)
+        private set
+    val categories: StateFlow<List<Category>> = db.lookupDao().observeCategories().stateIn(this, emptyList())
+
+    init {
+        viewModelScope.launch {
+            trip = db.tripDao().observeTrip(tripId).first()
+            item = planId?.let { db.planDao().get(it) } ?: run {
+                val cats = db.lookupDao().observeCategories().first()
+                PlanItem(
+                    tripId = tripId, title = shared?.title ?: "", location = shared?.location ?: "", date = initialDate,
+                    categoryId = shared?.categoryHint?.let { h -> cats.find { it.name == h }?.id },
+                )
+            }
+        }
+    }
+
+    fun edit(transform: (PlanItem) -> PlanItem) {
+        item = item?.let(transform)
+    }
+
+    fun save(onDone: () -> Unit) {
+        val i = item?.takeIf { it.title.isNotBlank() } ?: return
+        viewModelScope.launch {
+            val clean = i.copy(title = i.title.trim(), location = i.location.trim(), note = i.note.trim())
+            if (planId == null) db.planDao().insert(clean) else db.planDao().update(clean)
+            onDone()
+        }
+    }
+
+    fun delete(onDone: () -> Unit) {
+        val id = planId ?: return
+        viewModelScope.launch { db.planDao().delete(id); onDone() }
+    }
+}
+
+/** A map place shared into the app, waiting to be added to a trip. */
+object SharedPlaceInbox {
+    var pending by mutableStateOf<ParsedPlace?>(null)
 }

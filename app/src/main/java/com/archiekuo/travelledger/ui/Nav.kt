@@ -17,8 +17,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.archiekuo.travelledger.BuildConfig
-import com.archiekuo.travelledger.cover.CoverRepository
 import com.archiekuo.travelledger.data.AppDatabase
+import com.archiekuo.travelledger.data.PhotoType
 import com.archiekuo.travelledger.data.Trip
 import com.archiekuo.travelledger.data.TripCurrencyRate
 import com.archiekuo.travelledger.photo.PhotoProcessor
@@ -35,15 +35,35 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
     val listFactory = viewModelFactory { initializer { TripListViewModel(db) } }
     val lookupFactory = viewModelFactory { initializer { LookupViewModel(db) } }
     fun detailFactory(id: Long) = viewModelFactory { initializer { TripDetailViewModel(db, id) } }
+    val listVm: TripListViewModel = viewModel(factory = listFactory)
 
     // On a cold start, jump straight into the current trip; the trip list stays underneath.
     var launched by rememberSaveable { mutableStateOf(false) }
-    val listVm: TripListViewModel = viewModel(factory = listFactory)
     LaunchedEffect(Unit) {
         if (!launched) {
             launched = true
-            listVm.currentTripId(LocalDate.now())?.let { nav.navigate("trip/$it") }
+            if (SharedPlaceInbox.pending == null) listVm.currentTripId(LocalDate.now())?.let { nav.navigate("trip/$it") }
         }
+    }
+    // A place shared from a map app goes to the current (or most recent) trip's unscheduled list.
+    val shared = SharedPlaceInbox.pending
+    LaunchedEffect(shared) {
+        if (shared != null) {
+            val id = listVm.currentTripId(LocalDate.now()) ?: db.tripDao().getTrips().firstOrNull()?.id
+            if (id == null) {
+                android.widget.Toast.makeText(context, "請先建立一趟旅程", android.widget.Toast.LENGTH_LONG).show()
+                SharedPlaceInbox.pending = null
+            } else {
+                nav.navigate("trip/$id/plan/0?shared=true")
+            }
+        }
+    }
+
+    fun openMap(title: String, location: String) {
+        val uri = if (location.startsWith("http")) android.net.Uri.parse(location)
+        else android.net.Uri.parse("geo:0,0?q=" + android.net.Uri.encode(listOf(title, location).filter { it.isNotBlank() }.joinToString(" ")))
+        runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)) }
+            .onFailure { android.widget.Toast.makeText(context, "找不到地圖 App", android.widget.Toast.LENGTH_SHORT).show() }
     }
 
     NavHost(nav, startDestination = "trips") {
@@ -54,11 +74,14 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                 onOpen = { nav.navigate("trip/$it") },
                 onAdd = { nav.navigate("trip/new") },
                 onSettings = { nav.navigate("settings") },
+                version = BuildConfig.VERSION_NAME,
             )
         }
         composable("trip/new") {
             TripEditRoute(null, emptyList(), emptyList(), onBack = { nav.popBackStack() }) { trip, members, rates ->
-                listVm.create(trip, members, rates); nav.popBackStack()
+                listVm.create(trip, members, rates) { id ->
+                    nav.navigate("trip/$id") { popUpTo("trips") }
+                }
             }
         }
         composable("trip/{id}/edit", listOf(longArg("id"))) {
@@ -79,24 +102,71 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
             val trip by vm.trip.collectAsStateWithLifecycle()
             val members by vm.members.collectAsStateWithLifecycle()
             val expenses by vm.expenses.collectAsStateWithLifecycle()
-            TripDetailScreen(
-                trip, members.size, expenses,
-                onSwitchTrip = { if (!nav.popBackStack("trips", inclusive = false)) nav.navigate("trips") },
-                onEdit = { nav.navigate("trip/$id/edit") },
-                onAddExpense = { nav.navigate("trip/$id/expense/0") },
-                onOpenExpense = { eid -> nav.navigate("trip/$id/expense/$eid") },
-                onDelete = { vm.delete(); nav.popBackStack("trips", inclusive = false) },
+            val plans by vm.plans.collectAsStateWithLifecycle()
+            var tab by rememberSaveable { mutableStateOf<TripTab?>(null) }
+            TripScreen(
+                trip, members.size, expenses, plans, tab, { t -> tab = t },
+                TripActions(
+                    switchTrip = { if (!nav.popBackStack("trips", inclusive = false)) nav.navigate("trips") },
+                    edit = { nav.navigate("trip/$id/edit") },
+                    delete = { vm.delete(); if (!nav.popBackStack("trips", inclusive = false)) nav.navigate("trips") },
+                    addExpense = { planId -> nav.navigate("trip/$id/expense/0" + (planId?.let { p -> "?plan=$p" } ?: "")) },
+                    openExpense = { eid -> nav.navigate("trip/$id/expense/$eid") },
+                    addPlan = { date -> nav.navigate("trip/$id/plan/0" + (date?.let { d -> "?date=$d" } ?: "")) },
+                    openPlan = { pid -> nav.navigate("trip/$id/plan/$pid") },
+                    setPlanStatus = { pid, st -> vm.setPlanStatus(pid, st) },
+                    movePlans = { ids, date -> vm.movePlans(ids, date) },
+                    pastePlans = { text, date -> vm.addParsed(com.archiekuo.travelledger.logic.PlanParser.parseLines(text), date) },
+                    openMap = { p -> openMap(p.title, p.location) },
+                ),
             )
         }
-        composable("trip/{id}/expense/{eid}", listOf(longArg("id"), longArg("eid"))) {
+        composable(
+            "trip/{id}/expense/{eid}?plan={plan}",
+            listOf(longArg("id"), longArg("eid"), navArgument("plan") { type = NavType.LongType; defaultValue = 0L }),
+        ) {
             val id = it.arguments!!.getLong("id")
             val eid = it.arguments!!.getLong("eid").takeIf { v -> v != 0L }
+            val plan = it.arguments!!.getLong("plan").takeIf { v -> v != 0L }
             val app = context.applicationContext as Application
             val vm: ExpenseEditViewModel = viewModel(
-                key = "expense$id/$eid",
-                factory = viewModelFactory { initializer { ExpenseEditViewModel(app, db, id, eid, settings.saveMemoriesToGallery) } },
+                key = "expense$id/$eid/$plan",
+                factory = viewModelFactory { initializer { ExpenseEditViewModel(app, db, id, eid, settings.saveMemoriesToGallery, plan) } },
             )
             ExpenseEditRoute(vm, eid == null, onDone = { nav.popBackStack() })
+        }
+        composable(
+            "trip/{id}/plan/{pid}?date={date}&shared={shared}",
+            listOf(
+                longArg("id"), longArg("pid"),
+                navArgument("date") { type = NavType.LongType; defaultValue = Long.MIN_VALUE },
+                navArgument("shared") { type = NavType.BoolType; defaultValue = false },
+            ),
+        ) {
+            val id = it.arguments!!.getLong("id")
+            val pid = it.arguments!!.getLong("pid").takeIf { v -> v != 0L }
+            val date = it.arguments!!.getLong("date").takeIf { v -> v != Long.MIN_VALUE }
+            val fromShare = it.arguments!!.getBoolean("shared")
+            val vm: PlanEditViewModel = viewModel(
+                key = "plan$id/$pid/$date/$fromShare",
+                factory = viewModelFactory {
+                    initializer {
+                        PlanEditViewModel(db, id, pid, date, if (fromShare) SharedPlaceInbox.pending.also { SharedPlaceInbox.pending = null } else null)
+                    }
+                },
+            )
+            val categories by vm.categories.collectAsStateWithLifecycle()
+            PlanEditScreen(
+                vm.item, vm.trip, categories, isNew = pid == null,
+                PlanActions(
+                    edit = vm::edit,
+                    save = { vm.save { nav.popBackStack() } },
+                    delete = { vm.delete { nav.popBackStack() } },
+                    back = { nav.popBackStack() },
+                    record = { pid?.let { p -> nav.navigate("trip/$id/expense/0?plan=$p") } },
+                    openMap = { p -> openMap(p.title, p.location) },
+                ),
+            )
         }
         composable("settings") {
             SettingsScreen(
@@ -151,18 +221,20 @@ private fun ExpenseEditRoute(vm: ExpenseEditViewModel, isNew: Boolean, onDone: (
     val context = LocalContext.current
     val categories by vm.categories.collectAsStateWithLifecycle()
     val methods by vm.methods.collectAsStateWithLifecycle()
-    var captureFile by remember { mutableStateOf<File?>(null) }
+    var captureFile by rememberSaveable { mutableStateOf<String?>(null) }
+    var captureMode by rememberSaveable { mutableStateOf(PhotoType.MEMORY) }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        val f = captureFile
-        if (ok && f != null) vm.addPhoto(android.net.Uri.fromFile(f), cleanup = f) else f?.delete()
+        val f = captureFile?.let(::File)
+        if (ok && f != null) vm.addPhoto(android.net.Uri.fromFile(f), captureMode, cleanup = f) else f?.delete()
         captureFile = null
     }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) vm.addPhoto(uri)
+        if (uri != null) vm.addPhoto(uri, mode = null)
     }
-    fun takePhoto() {
+    fun capture(mode: String) {
         val (file, uri) = PhotoProcessor.newCaptureUri(context)
-        captureFile = file
+        captureFile = file.absolutePath
+        captureMode = mode
         camera.launch(uri)
     }
     androidx.activity.compose.BackHandler { vm.cancel(); onDone() }
@@ -172,7 +244,8 @@ private fun ExpenseEditRoute(vm: ExpenseEditViewModel, isNew: Boolean, onDone: (
         receipt = vm.receipt, processing = vm.processing,
         actions = ExpenseActions(
             edit = vm::edit, key = vm::key, currency = vm::setCurrency, pickSuggestion = vm::pickSuggestion,
-            takePhoto = ::takePhoto,
+            takeReceipt = { capture(PhotoType.RECEIPT) },
+            takePhoto = { capture(PhotoType.MEMORY) },
             pickPhoto = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
             removePhoto = vm::removePhoto, setPhotoType = vm::setPhotoType,
             savePhotoToGallery = { i ->
@@ -187,7 +260,7 @@ private fun ExpenseEditRoute(vm: ExpenseEditViewModel, isNew: Boolean, onDone: (
     )
 }
 
-/** Trip editor with cover suggestions and the system photo picker; cleans up unsaved cover files. */
+/** Trip editor with the system photo picker for the cover; cleans up unsaved cover files. */
 @Composable
 private fun TripEditRoute(
     initial: Trip?,
@@ -199,7 +272,6 @@ private fun TripEditRoute(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var cover by rememberSaveable { mutableStateOf(initial?.coverPath) }
-    var results by remember { mutableStateOf<CoverResults>(CoverResults.Idle) }
     var busy by remember { mutableStateOf(false) }
     fun setCover(path: String) {
         if (cover != initial?.coverPath) CoverStore.delete(cover)
@@ -213,20 +285,7 @@ private fun TripEditRoute(
         }
     }
     TripEditScreen(
-        initial, initialMembers, initialRates, cover, results, busy,
-        onSearchCovers = { k ->
-            scope.launch {
-                results = CoverResults.Loading
-                results = CoverResults.Found(k, CoverRepository.search(k))
-            }
-        },
-        onPickCandidate = { c ->
-            scope.launch {
-                busy = true
-                CoverRepository.download(context, c)?.let(::setCover)
-                busy = false
-            }
-        },
+        initial, initialMembers, initialRates, cover, busy,
         onPickCover = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
         onBack = {
             if (cover != initial?.coverPath) CoverStore.delete(cover)

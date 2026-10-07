@@ -92,6 +92,8 @@ data class Expense(
     val minuteOfDay: Int? = null,
     /** Text recognized from receipt photos, kept for search. */
     @ColumnInfo(defaultValue = "") val ocrText: String = "",
+    /** The itinerary item this expense was recorded for, if any. */
+    val planItemId: Long? = null,
 )
 
 @Entity(
@@ -121,4 +123,42 @@ data class Photo(
 object PhotoType {
     const val RECEIPT = "RECEIPT"
     const val MEMORY = "MEMORY"
+}
+
+/** A place or activity planned for the trip: scheduled on a day, or unscheduled ("待排") when [date] is null. */
+@Entity(
+    tableName = "plan_item",
+    foreignKeys = [ForeignKey(Trip::class, ["id"], ["tripId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("tripId")],
+)
+data class PlanItem(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val tripId: Long,
+    val title: String,
+    /** Shares the expense categories so one-tap recording files it correctly. */
+    val categoryId: Long? = null,
+    val date: Long? = null,
+    val minuteOfDay: Int? = null,
+    val status: String = PlanStatus.TODO,
+    val reservation: String = Reservation.NONE,
+    /** Booking time, party size, confirmation number… */
+    val reservationNote: String = "",
+    /** Address or a map link. */
+    val location: String = "",
+    /** Estimated cost in TWD. */
+    val estCost: Double? = null,
+    val note: String = "",
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
+object PlanStatus {
+    const val TODO = "TODO"
+    const val DONE = "DONE"
+    const val SKIPPED = "SKIPPED"
+}
+
+object Reservation {
+    const val NONE = "NONE"
+    const val NEEDED = "NEEDED"
+    const val BOOKED = "BOOKED"
 }

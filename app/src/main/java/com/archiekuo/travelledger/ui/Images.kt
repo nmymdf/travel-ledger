@@ -62,24 +62,3 @@ fun rememberLocalImage(path: String?, targetPx: Int = 1080): State<ImageBitmap?>
         }
     }
 
-/** Loads a remote image (cover candidates) into memory, sampled down to about [targetPx] wide. */
-@Composable
-fun rememberRemoteImage(url: String?, targetPx: Int = 480): State<ImageBitmap?> =
-    produceState(initialValue = url?.let { ImageCache.get(it) }, url) {
-        if (url == null || value != null) return@produceState
-        value = withContext(Dispatchers.IO) {
-            runCatching {
-                val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
-                c.setRequestProperty("User-Agent", com.archiekuo.travelledger.logic.CoverSearch.USER_AGENT)
-                c.connectTimeout = 8000
-                c.readTimeout = 15000
-                val bytes = try { c.inputStream.use { it.readBytes() } } finally { c.disconnect() }
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-                var sample = 1
-                while (bounds.outWidth / (sample * 2) >= targetPx) sample *= 2
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
-                    ?.asImageBitmap()?.also { ImageCache.put(url, it) }
-            }.getOrNull()
-        }
-    }

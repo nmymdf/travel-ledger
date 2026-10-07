@@ -94,12 +94,7 @@ fun SettingsScreen(
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom,
                 ) {
                     Text("作者 ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        "ArchieKUO",
-                        color = if (ledger.dark) Color(0xFFE6C463) else Color(0xFFB8901F),
-                        fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold,
-                        fontSize = 22.sp, letterSpacing = 0.5.sp,
-                    )
+                    AuthorSignature(22)
                 }
             }
         }
@@ -148,4 +143,15 @@ private fun SettingRow(icon: ImageVector, color: Color, title: String, subtitle:
         }
         if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = ledger.textMuted)
     }
+}
+
+/** The author's name in gold italic. */
+@Composable
+fun AuthorSignature(sizeSp: Int) {
+    Text(
+        "ArchieKUO",
+        color = if (ledger.dark) Color(0xFFE6C463) else Color(0xFFB8901F),
+        fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold,
+        fontSize = sizeSp.sp, letterSpacing = 0.5.sp, maxLines = 1,
+    )
 }
