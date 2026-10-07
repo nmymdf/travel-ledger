@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>旅帳 使用說明書</title>
+<!--
+  旅帳使用說明書原稿。修改這個檔案後執行:
+    PLAYWRIGHT_DIR=/opt/node-tools/node_modules node docs/manual/build.mjs
+  會重新產生 docs/manual/旅帳使用說明書.pdf。
+  截圖來自 app/src/test/snapshots/images(執行 recordPaparazziDebug 會更新)。
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Noto+Serif+TC:wght@700&display=block" rel="stylesheet">
+<style>
+  :root {
+    --ink: #17181f;
+    --muted: #5f6374;
+    --line: #e4e6ee;
+    --soft: #f4f5fa;
+    --primary: #5b57f2;
+    --primary-soft: #ecebff;
+    --gold: #b8901f;
+    --green: #16a36d;
+    --red: #d9434a;
+  }
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  @page :first { margin: 0; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0; color: var(--ink); background: #fff;
+    font-family: "Noto Sans TC", "WenQuanYi Zen Hei", sans-serif;
+    font-size: 11pt; line-height: 1.75;
+  }
+  h1, h2, h3 { line-height: 1.35; margin: 0; }
+  p { margin: 0 0 8pt; }
+  ul, ol { margin: 0 0 8pt; padding-left: 18pt; }
+  li { margin-bottom: 3pt; }
+  b, strong { font-weight: 700; }
+
+  /* ── Cover ── */
+  .cover {
+    height: 297mm; padding: 34mm 22mm 24mm; page-break-after: always;
+    display: flex; flex-direction: column;
+    background: linear-gradient(160deg, #f6f6ff 0%, #ffffff 55%, #fff8ea 100%);
+  }
+  .cover img { width: 46mm; height: 46mm; object-fit: cover; border-radius: 11mm; box-shadow: 0 6mm 14mm rgba(40, 40, 90, .18); }
+  .cover .kicker { margin-top: 18mm; color: var(--primary); font-weight: 700; letter-spacing: 3pt; font-size: 11pt; }
+  .cover h1 { font-size: 44pt; font-weight: 900; letter-spacing: 2pt; margin-top: 3mm; }
+  .cover .sub { font-size: 15pt; color: var(--muted); margin-top: 2mm; }
+  .cover .tagline { margin-top: 12mm; font-size: 12pt; color: var(--ink); max-width: 120mm; }
+  .cover .meta { margin-top: auto; display: flex; align-items: flex-end; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 6mm; }
+  .cover .meta div { color: var(--muted); font-size: 10pt; line-height: 1.6; }
+  .sign { font-family: "Noto Serif TC", serif; font-style: italic; font-weight: 700; color: var(--gold); font-size: 22pt; letter-spacing: .5pt; }
+
+  /* ── Chapters ── */
+  .chapter { page-break-before: always; }
+  .chapter-head { display: flex; align-items: baseline; gap: 4mm; border-bottom: 2px solid var(--ink); padding-bottom: 3mm; margin-bottom: 6mm; }
+  .chapter-head .no { font-size: 26pt; font-weight: 900; color: var(--primary); }
+  .chapter-head h2 { font-size: 20pt; font-weight: 900; }
+  h3 { font-size: 13pt; font-weight: 700; margin: 7mm 0 2.5mm; display: flex; align-items: center; gap: 2mm; }
+  h3::before { content: ""; width: 3pt; height: 13pt; background: var(--primary); border-radius: 2pt; }
+  .lead { font-size: 11.5pt; color: var(--muted); margin-bottom: 5mm; }
+
+  /* text + phone screenshot side by side */
+  .split { display: grid; grid-template-columns: 1fr 58mm; gap: 8mm; align-items: start; break-inside: avoid; }
+  .split.two { grid-template-columns: 1fr 1fr; }
+  .phone { margin: 0; text-align: center; }
+  .phone img { width: 100%; border-radius: 5mm; border: 1px solid var(--line); box-shadow: 0 2mm 6mm rgba(20, 20, 60, .10); display: block; }
+  .phone figcaption { font-size: 9pt; color: var(--muted); margin-top: 2mm; line-height: 1.4; }
+  .phones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; margin: 4mm 0; break-inside: avoid; }
+  .phones.two { grid-template-columns: repeat(2, 1fr); padding: 0 18mm; }
+
+  /* steps */
+  .steps { counter-reset: step; list-style: none; padding: 0; }
+  .steps li { counter-increment: step; position: relative; padding-left: 10mm; margin-bottom: 3mm; }
+  .steps li::before {
+    content: counter(step); position: absolute; left: 0; top: .25em;
+    width: 6.5mm; height: 6.5mm; border-radius: 50%; background: var(--primary); color: #fff;
+    font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* callouts */
+  .tip, .note, .warn { border-radius: 3mm; padding: 3mm 4mm; margin: 4mm 0; font-size: 10.5pt; break-inside: avoid; }
+  .tip { background: var(--primary-soft); }
+  .note { background: var(--soft); }
+  .warn { background: #fff1f1; }
+  .tip b:first-child, .note b:first-child, .warn b:first-child { margin-right: 2mm; }
+  .tip b:first-child { color: var(--primary); }
+  .warn b:first-child { color: var(--red); }
+
+  /* tables */
+  table { width: 100%; border-collapse: collapse; margin: 3mm 0 5mm; font-size: 10.5pt; break-inside: avoid; }
+  th { background: var(--soft); text-align: left; font-weight: 700; }
+  th, td { padding: 2.2mm 3mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td:first-child { white-space: nowrap; font-weight: 500; }
+
+  .key { display: inline-block; padding: 0 2mm; border: 1px solid var(--line); border-radius: 1.5mm; background: var(--soft); font-size: 9.5pt; line-height: 1.6; }
+  .pill { display: inline-block; padding: 0 2.2mm; border-radius: 1.5mm; font-size: 9.5pt; font-weight: 500; }
+  .pill.red { background: #ffe9ea; color: var(--red); }
+  .pill.green { background: #e3f7ee; color: var(--green); }
+
+  /* TOC */
+  .toc { list-style: none; padding: 0; margin-top: 4mm; }
+  .toc li { display: flex; gap: 4mm; padding: 2.4mm 0; border-bottom: 1px dashed var(--line); font-size: 12pt; }
+  .toc .n { color: var(--primary); font-weight: 900; width: 9mm; }
+  .toc .d { color: var(--muted); font-size: 10pt; margin-left: auto; }
+</style>
+</head>
+<body>
+
+<!-- ───────────── 封面 ───────────── -->
+<section class="cover">
+  <img src="img/icon.webp" alt="">
+  <div class="kicker">TRAVEL LEDGER</div>
+  <h1>旅帳</h1>
+  <div class="sub">使用說明書</div>
+  <p class="tagline">出國旅遊的記帳與行程規劃 App。記一筆只要三步,收據拍照自動辨識,出發前做的功課也能一起帶著走。</p>
+  <div class="meta">
+    <div>適用版本 v0.5.0<br>文件日期 2026 年 10 月 7 日<br>Android 10 以上</div>
+    <div style="text-align:right"><div style="font-size:10pt;color:var(--muted)">作者</div><span class="sign">ArchieKUO</span></div>
+  </div>
+</section>
+
+<!-- ───────────── 目錄 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><h2>目錄</h2></div>
+  <ol class="toc">
+    <li><span class="n">1</span>認識旅帳<span class="d">它能做什麼、資料存在哪裡</span></li>
+    <li><span class="n">2</span>安裝與更新<span class="d">安裝 APK、覆蓋更新</span></li>
+    <li><span class="n">3</span>建立旅程<span class="d">名稱、封面、日期、成員、匯率、預算</span></li>
+    <li><span class="n">4</span>旅程畫面<span class="d">今天、行程、帳本、統計四個分頁</span></li>
+    <li><span class="n">5</span>記一筆<span class="d">名稱、分類、付款方式、計算機、幣別匯率</span></li>
+    <li><span class="n">6</span>拍照與收據辨識<span class="d">拍收據、拍照、相簿</span></li>
+    <li><span class="n">7</span>行程規劃<span class="d">待排清單、依天排程、訂位、地圖分享</span></li>
+    <li><span class="n">8</span>今天<span class="d">出發前、旅途中、回來後</span></li>
+    <li><span class="n">9</span>帳本與統計<span class="d">總花費、分類、每日、付款方式</span></li>
+    <li><span class="n">10</span>旅程列表<span class="d">切換與新增旅程</span></li>
+    <li><span class="n">11</span>設定<span class="d">外觀、字體大小、照片、分類、付款方式</span></li>
+    <li><span class="n">12</span>常見問題</li>
+    <li><span class="n">13</span>尚未提供的功能與版本紀錄</li>
+  </ol>
+</section>
+
+<!-- ───────────── 1 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">1</span><h2>認識旅帳</h2></div>
+  <p class="lead">旅帳以「旅程」為單位管理花費與行程。每趟旅程各自獨立,舊旅程永遠留著可以回顧。</p>
+
+  <h3>主要功能</h3>
+  <ul>
+    <li><b>記帳</b>:每筆支出可用任何幣別(日圓、韓元、美元…),自動換算成新台幣。所有總計一律以<b>新台幣</b>計算。</li>
+    <li><b>收據辨識</b>:拍下收據,自動讀出店家、金額、幣別、日期時間,確認後一鍵填入。</li>
+    <li><b>行程規劃</b>:出發前把想去的景點、要訂位的餐廳放進來,排到每一天;旅途中逐項打勾,順手記帳。</li>
+    <li><b>統計</b>:分類比例、每天花多少、付款方式,一眼看懂這趟花在哪裡。</li>
+  </ul>
+
+  <h3>資料存在哪裡</h3>
+  <p>所有資料(帳目、行程、照片)<b>只存在這支手機裡</b>,不上傳雲端,也不需要網路。在國外沒有網路時,記帳、拍照、收據辨識都能正常使用。</p>
+  <div class="warn"><b>注意</b>目前還沒有備份功能。移除 App 或換手機,資料會消失。備份與還原會在之後的版本加入。</div>
+
+  <h3>名詞說明</h3>
+  <table>
+    <tr><th style="width:28mm">名詞</th><th>意思</th></tr>
+    <tr><td>旅程</td><td>一趟旅行,例如「東京美食之旅」。有起訖日期、成員、預算。</td></tr>
+    <tr><td>支出</td><td>一筆花費。有名稱、金額、幣別、匯率、分類、付款方式、日期時間,最多 3 張照片。</td></tr>
+    <tr><td>行程</td><td>想去的地方或活動。可以排在某一天,或先放在「待排」。</td></tr>
+    <tr><td>待排</td><td>還沒決定哪一天去的行程清單。</td></tr>
+    <tr><td>預設匯率</td><td>這趟旅程某個外幣的匯率,記帳時自動帶入,每筆仍可個別修改。</td></tr>
+  </table>
+</section>
+
+<!-- ───────────── 2 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">2</span><h2>安裝與更新</h2></div>
+
+  <h3>第一次安裝</h3>
+  <ol class="steps">
+    <li>把 <b>app-release.apk</b> 存到手機,在檔案管理員或下載清單中點開。</li>
+    <li>手機會詢問是否允許「安裝不明應用程式」,允許這個來源(例如 LINE、檔案管理員或瀏覽器)。</li>
+    <li>按「安裝」,完成後桌面會出現旅帳的行李箱圖示。</li>
+  </ol>
+
+  <h3>更新到新版本</h3>
+  <p>直接安裝新的 APK 即可覆蓋舊版,<b>已記的資料會保留</b>。App 會自動升級資料格式。</p>
+  <div class="note"><b>例外</b>從 v0.3.0 以前的版本更新到 v0.4.0 以後,因為 App 的識別碼改過,需要先移除舊版再安裝,舊的測試資料不會保留。</div>
+
+  <h3>需要的權限</h3>
+  <table>
+    <tr><th style="width:38mm">項目</th><th>說明</th></tr>
+    <tr><td>相機</td><td>使用手機內建相機 App 拍照,旅帳本身不要求相機權限。</td></tr>
+    <tr><td>相簿</td><td>使用系統的照片選擇器,只會讀取你選的那張照片。</td></tr>
+    <tr><td>存到相簿</td><td>回憶照片會存到相簿的「旅帳」資料夾,Android 10 以上不需額外權限。</td></tr>
+    <tr><td>網路</td><td>不需要。</td></tr>
+  </table>
+</section>
+
+<!-- ───────────── 3 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">3</span><h2>建立旅程</h2></div>
+  <div class="split">
+    <div>
+      <p class="lead">在旅程列表按「新增旅程」(或右上角的「+」),填好後按右上角的 ✓。建立後會直接進入這趟旅程。</p>
+      <table>
+        <tr><th>欄位</th><th>說明</th></tr>
+        <tr><td>封面</td><td>點封面從相簿選一張照片。不選的話,會依旅程名稱給一個漸層色封面。</td></tr>
+        <tr><td>旅程名稱</td><td>例如「東京美食之旅」。必填。</td></tr>
+        <tr><td>出發/回程</td><td>分別點兩格選日期。回程不能早於出發;改出發日時,天數會保持不變。</td></tr>
+        <tr><td>旅行成員</td><td>按「新增成員」輸入名字,用來算人均花費(之後的分帳也會用到)。</td></tr>
+        <tr><td>預設匯率</td><td>按「新增幣別」選外幣,輸入「1 外幣 = ? 新台幣」。可以不填,記第一筆該外幣時會自動記下。</td></tr>
+        <tr><td>預算</td><td>選填,以新台幣計算。填了之後會顯示使用百分比與剩餘金額。</td></tr>
+        <tr><td>分帳功能</td><td>與朋友旅遊時開啟。(結算功能將於之後版本提供)</td></tr>
+      </table>
+      <div class="tip"><b>提示</b>之後要修改,在旅程畫面右上角「⋮ → 編輯旅程」。</div>
+    </div>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tripEdit_tripedit_light.png"><figcaption>編輯旅程</figcaption></figure>
+  </div>
+</section>
+
+<!-- ───────────── 4 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">4</span><h2>旅程畫面</h2></div>
+  <p class="lead">進入旅程後,下方有四個分頁,中間的大按鈕是「記一筆」。</p>
+  <div class="phones">
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabToday_tabtoday_light.png"><figcaption>今天</figcaption></figure>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabPlan_tabplan_light.png"><figcaption>行程</figcaption></figure>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabLedger_tabledger_light.png"><figcaption>帳本</figcaption></figure>
+  </div>
+  <table>
+    <tr><th style="width:24mm">分頁</th><th>內容</th></tr>
+    <tr><td>今天</td><td>今天的行程與花費。出發前顯示倒數天數與還沒訂位的項目。(第 8 章)</td></tr>
+    <tr><td>行程</td><td>所有行程,可依天或依類型檢視。(第 7 章)</td></tr>
+    <tr><td>帳本</td><td>總花費、分類比例、每天的支出明細。(第 9 章)</td></tr>
+    <tr><td>統計</td><td>圓環圖、每日長條圖、付款方式比例。(第 9 章)</td></tr>
+  </table>
+  <h3>打開 App 時會看到哪裡</h3>
+  <ul>
+    <li>有<b>進行中</b>或 <b>30 天內出發</b>的旅程時,打開 App 會直接進入那趟旅程,不必再從列表點選。</li>
+    <li>自動選擇分頁:出發前開「行程」,旅途中開「今天」,回來後開「統計」。</li>
+    <li>點左上角的<b>旅程名稱</b>(有 ▾ 記號)可回到旅程列表,切換到其他旅程。</li>
+  </ul>
+</section>
+
+<!-- ───────────── 5 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">5</span><h2>記一筆</h2></div>
+  <div class="split">
+    <div>
+      <p class="lead">按下方中間的「＋ 記一筆」。一個畫面就完成,上半部填內容,下半部是計算機。</p>
+      <ol class="steps">
+        <li><b>名稱</b>:輸入店家或項目,例如「一蘭拉麵 本店」。輸入時會跳出以前用過的名稱,點一下就帶入,<b>分類也會自動帶上次的</b>。名稱可以先填,付錢前就能寫。</li>
+        <li><b>分類</b>:點一個分類方塊(吃、交通、購物…),可左右滑。</li>
+        <li><b>付款方式</b>:現金、信用卡、行動支付。</li>
+        <li><b>金額</b>:用下方計算機輸入,按「儲存」完成。</li>
+      </ol>
+      <div class="tip"><b>提示</b>幣別、分類、付款方式會自動帶入上一筆的設定,連續記帳時通常只要輸入名稱和金額。</div>
+    </div>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_expenseNew_expensenew_light.png"><figcaption>記一筆</figcaption></figure>
+  </div>
+
+  <h3>計算機</h3>
+  <table>
+    <tr><th style="width:30mm">按鍵</th><th>功能</th></tr>
+    <tr><td><span class="key">JPY ▾</span></td><td>切換幣別。清單會列出這趟旅程用過的幣別,「其他幣別…」可選任何幣別。</td></tr>
+    <tr><td><span class="key">匯率 0.21 ✎</span></td><td>顯示目前匯率與換算的新台幣金額。點一下可修改這一筆的匯率(例如刷卡的實際匯率)。</td></tr>
+    <tr><td><span class="key">00</span></td><td>一次輸入兩個 0,輸入日圓、韓元時特別方便。</td></tr>
+    <tr><td><span class="key">⌫</span></td><td>刪除一位;<b>長按</b>清除全部。</td></tr>
+    <tr><td><span class="key">C</span></td><td>清除金額。</td></tr>
+    <tr><td><span class="key">儲存</span></td><td>金額大於 0 且有匯率時才能按。</td></tr>
+  </table>
+
+  <h3>其他欄位</h3>
+  <ul>
+    <li><b>日期時間</b>:自動帶入現在。點右上角的時間標籤可修改;先選日期,再選時間(也可選「不記時間」)。預付的機票、住宿可以記在出發前的日期。</li>
+    <li><b>備註</b>:按「加備註」才會展開,平常收起來不佔空間。</li>
+  </ul>
+
+  <h3>修改或刪除</h3>
+  <p>在帳本或今天分頁點一筆支出即可修改。右上角垃圾桶可刪除,照片會一起刪除。</p>
+</section>
+
+<!-- ───────────── 6 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">6</span><h2>拍照與收據辨識</h2></div>
+  <div class="split">
+    <div>
+      <p class="lead">記一筆畫面名稱下方有三個按鈕,每筆最多 3 張照片。</p>
+      <table>
+        <tr><th>按鈕</th><th>用途</th><th>存到手機相簿</th></tr>
+        <tr><td>拍收據</td><td>收據、發票。拍完自動辨識。</td><td>不存</td></tr>
+        <tr><td>拍照</td><td>餐廳、菜色、景點。看到照片就想得起這筆錢花在哪。不辨識。</td><td>存</td></tr>
+        <tr><td>相簿</td><td>選以前拍的照片,自動判斷是收據還是一般照片。</td><td>—</td></tr>
+      </table>
+      <h3>收據辨識</h3>
+      <ol class="steps">
+        <li>按「拍收據」,把整張收據拍清楚、拍平。</li>
+        <li>出現「從收據讀到」卡片,顯示讀到的店家、金額、時間。</li>
+        <li>確認無誤按「套用」;不對就按「略過」,自己輸入。</li>
+      </ol>
+      <p>辨識在手機上離線進行,支援中文、日文、韓文、英文。讀到的全部文字會保存下來,之後可用來搜尋。</p>
+    </div>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_expenseReceipt_expensereceipt_light.png"><figcaption>收據辨識結果</figcaption></figure>
+  </div>
+  <div class="note"><b>辨識的準確度</b>金額、幣別通常準確;店家名稱有時是 logo 圖片而讀不到;品項明細不會自動拆開。辨識不準的收據歡迎回報,用來改進判斷規則。</div>
+  <h3>看照片</h3>
+  <p>點照片縮圖可全螢幕檢視,左右滑動切換。下方可以:</p>
+  <ul>
+    <li>切換「收據/回憶」類型</li>
+    <li>刪除這張照片</li>
+    <li>存到手機相簿</li>
+  </ul>
+  <p>有照片的支出,在帳本列表右側會顯示縮圖。</p>
+</section>
+
+<!-- ───────────── 7 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">7</span><h2>行程規劃</h2></div>
+  <p class="lead">出發前做的功課放進旅帳:想去的景點、要訂位的餐廳。可以先丟進「待排」,之後再排到某一天。</p>
+  <div class="phones two">
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabPlan_tabplan_light.png"><figcaption>行程(依天)</figcaption></figure>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_planEdit_planedit_light.png"><figcaption>編輯行程</figcaption></figure>
+  </div>
+
+  <h3>新增行程的三種方式</h3>
+  <table>
+    <tr><th style="width:34mm">方式</th><th>做法</th></tr>
+    <tr><td>新增</td><td>行程分頁右上角「＋ 新增」,或某一天旁邊的「＋ 加入」(直接排到那天)。</td></tr>
+    <tr><td>貼上多筆</td><td>按剪貼簿圖示,貼上整理好的清單,一行一個。會自動去掉編號、符號,並猜分類(例如「拉麵」→吃、「寺」→景點、「飯店」→住宿)。全部放進待排。</td></tr>
+    <tr><td>從 Google 地圖分享</td><td>在 Google 地圖打開一個地點 → 按「分享」→ 選「旅帳」。名稱和地圖連結自動帶入,加到目前旅程。</td></tr>
+  </table>
+
+  <h3>行程的內容</h3>
+  <table>
+    <tr><th style="width:26mm">欄位</th><th>說明</th></tr>
+    <tr><td>名稱、分類</td><td>分類與記帳共用,所以從行程記帳時分類會自動對上。</td></tr>
+    <tr><td>哪一天</td><td>選「待排」或 D1、D2…;「加時間」可指定時間。</td></tr>
+    <tr><td>狀態</td><td>未去/已去/跳過。</td></tr>
+    <tr><td>訂位</td><td>不用/需要訂位/已訂好。已訂好可填訂位時間、人數、確認編號。</td></tr>
+    <tr><td>地點</td><td>地址或 Google 地圖連結。右邊的地圖鈕可直接開地圖。</td></tr>
+    <tr><td>預估花費</td><td>新台幣,選填。</td></tr>
+    <tr><td>筆記</td><td>必點菜色、營業時間、注意事項…</td></tr>
+  </table>
+
+  <h3>兩種檢視</h3>
+  <ul>
+    <li><b>依天</b>:待排清單在最上面,接著 Day 1、Day 2…每天的行程依時間排列。</li>
+    <li><b>依類型</b>:所有餐廳一起、所有景點一起,並標出幾間還沒訂位。出發前檢查最方便。</li>
+  </ul>
+  <h3>標記的意思</h3>
+  <p>
+    <span class="pill red">需訂位</span> 還沒訂,行程頁上方也會有紅色提醒。
+    <span class="pill green">已訂 19:00 4位</span> 已訂好。
+    左邊的圓圈點一下可打勾(已去),再點一下取消。
+  </p>
+  <h3>為行程記一筆</h3>
+  <p>在行程的「記一筆」按鈕(今天分頁),或編輯行程頁的「為這個行程記一筆」,會開啟記一筆並帶好名稱與分類。儲存後該行程自動打勾,旁邊顯示「已花 NT$ …」。</p>
+</section>
+
+<!-- ───────────── 8 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">8</span><h2>今天</h2></div>
+  <div class="split two">
+    <div>
+      <p class="lead">「今天」分頁會依旅程的階段顯示不同內容。</p>
+      <h3>出發前</h3>
+      <ul>
+        <li>出發倒數天數、目前已付的金額(機票、住宿等預付)。</li>
+        <li>行程準備狀況:已排幾項、待排幾項,點一下到行程分頁。</li>
+        <li>還沒訂位的清單。</li>
+      </ul>
+      <h3>旅途中</h3>
+      <ul>
+        <li>今天是第幾天、今天已花多少、行程完成幾項。</li>
+        <li>今天的行程:每一項右邊有<b>導航</b>(開 Google 地圖)與<b>記一筆</b>按鈕。</li>
+        <li>之前沒去的:按「全部移到今天」一次搬過來。</li>
+        <li>今天的支出明細。</li>
+      </ul>
+      <h3>回來後</h3>
+      <ul>
+        <li>旅程總花費、去了幾個地方。</li>
+        <li>沒去成的清單,留著當下次的口袋名單。</li>
+      </ul>
+    </div>
+    <div class="phones two" style="padding:0;grid-template-columns:1fr 1fr;gap:4mm">
+      <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabTodayBefore.png"><figcaption>出發前</figcaption></figure>
+      <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabToday_tabtoday_light.png"><figcaption>旅途中</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── 9 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">9</span><h2>帳本與統計</h2></div>
+  <div class="split two">
+    <div>
+      <h3>帳本</h3>
+      <ul>
+        <li><b>總花費卡片</b>:總花費(新台幣)、預算使用百分比,以及今天、日均、人均。預算進度條用不到八成是綠色,超過八成變琥珀色,超支變紅色。</li>
+        <li><b>分類比例</b>:彩色比例條與各分類金額、百分比。<b>點某個分類</b>,下方明細只顯示該分類;再點一次或按「顯示全部」恢復。</li>
+        <li><b>每日明細</b>:依日期分組,標示第幾天;出發前的預付會標「出發前」。每筆顯示原幣金額(小字)、新台幣金額與照片縮圖。</li>
+      </ul>
+      <h3>統計</h3>
+      <ul>
+        <li><b>總覽</b>:總花費、日均、人均、筆數、最大一筆。</li>
+        <li><b>分類圓環圖</b>:各分類的比例與金額。</li>
+        <li><b>每天花多少</b>:每天一根長條,可左右滑;預付另列「出發前」。</li>
+        <li><b>付款方式</b>:現金、信用卡、行動支付各佔多少。</li>
+      </ul>
+    </div>
+    <div class="phones two" style="padding:0;grid-template-columns:1fr 1fr;gap:4mm">
+      <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabLedger_tabledger_light.png"><figcaption>帳本</figcaption></figure>
+      <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabStats_tabstats_light.png"><figcaption>統計</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── 10 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">10</span><h2>旅程列表</h2></div>
+  <div class="split">
+    <div>
+      <p>從旅程畫面點左上角的旅程名稱進入。</p>
+      <ul>
+        <li>上方分頁:<b>進行中</b>(含即將出發)/<b>已結束</b>/<b>全部</b>。</li>
+        <li>第一趟旅程用大卡片顯示封面、狀態(例如「旅行中 · 第 3 天」「還有 38 天出發」)、預算進度。</li>
+        <li>有進行中的旅程時,新增旅程是右上角的小「＋」;沒有任何旅程時才顯示大按鈕。</li>
+        <li>標題列顯示版本號與作者簽名。</li>
+      </ul>
+    </div>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_home_home_light.png"><figcaption>旅程列表</figcaption></figure>
+  </div>
+
+</section>
+
+<!-- ───────────── 11 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">11</span><h2>設定</h2></div>
+  <div class="split">
+    <div>
+      <table>
+        <tr><th>項目</th><th>說明</th></tr>
+        <tr><td>外觀</td><td>跟隨系統/淺色/深色。</td></tr>
+        <tr><td>字體大小</td><td>標準/大/特大,會在手機系統字型大小上再放大。建議先用手機「設定 → 顯示 → 字型大小」調整,覺得不夠再調這裡。</td></tr>
+        <tr><td>照片</td><td>「回憶照片自動存到相簿」,預設開啟;收據不會存到相簿。</td></tr>
+        <tr><td>分類管理</td><td>新增、改名、排序、刪除,可自訂圖示(20 種)與顏色(10 色)。刪除分類時,原本的支出會改歸「其他」;「其他」不能刪。</td></tr>
+        <tr><td>付款方式管理</td><td>新增、改名、排序、刪除。</td></tr>
+        <tr><td>關於</td><td>結算幣別(新台幣)、版本、作者。</td></tr>
+      </table>
+    </div>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_settings_settings_light.png"><figcaption>設定</figcaption></figure>
+  </div>
+</section>
+
+<!-- ───────────── 12 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">12</span><h2>常見問題</h2></div>
+  <table>
+    <tr><th style="width:52mm">問題</th><th>回答</th></tr>
+    <tr><td>刷卡匯率跟預設不一樣?</td><td>在記一筆的計算機上點「匯率 ✎」修改這一筆即可,不影響其他筆。要改之後的預設值,到「編輯旅程 → 預設匯率」。</td></tr>
+    <tr><td>改了預設匯率,舊的帳會變嗎?</td><td>不會。每筆支出記錄當時的匯率,只有之後新增的支出會用新的預設值。</td></tr>
+    <tr><td>機票在出發前就付了怎麼記?</td><td>記一筆時把日期改成實際付款日即可,帳本會標示「出發前」,統計也會另列。</td></tr>
+    <tr><td>收據辨識不準?</td><td>按「略過」自己輸入即可,照片仍會保存。可把收據照片回報給作者改進。</td></tr>
+    <tr><td>分享選單找不到旅帳?</td><td>在 Google 地圖的分享選單往右滑或按「更多」,找「旅帳」或「加入旅帳行程」。</td></tr>
+    <tr><td>字太小?</td><td>到手機「設定 → 顯示 → 字型大小」調大,或旅帳「設定 → 字體大小」選「大」或「特大」。</td></tr>
+    <tr><td>照片存在哪?</td><td>App 內部儲存空間,收據與回憶分開存放。回憶照片另外存一份在手機相簿的「旅帳」資料夾。</td></tr>
+    <tr><td>刪除旅程會怎樣?</td><td>該旅程的所有支出、行程、App 內的照片都會刪除,無法復原。已存到手機相簿的照片不受影響。</td></tr>
+    <tr><td>換手機怎麼辦?</td><td>目前尚無備份功能,之後版本會提供匯出與還原。</td></tr>
+  </table>
+</section>
+
+<!-- ───────────── 13 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">13</span><h2>尚未提供的功能與版本紀錄</h2></div>
+  <h3>規劃中的功能</h3>
+  <ul>
+    <li><b>分帳結算</b>:記錄誰付款、誰分攤,自動算出誰該付誰多少。</li>
+    <li><b>備份與還原</b>:匯出成一個檔案(可選含照片),換手機時匯入。</li>
+    <li><b>匯出</b>:CSV/Excel,方便回電腦整理。</li>
+    <li><b>搜尋</b>:用名稱、備註、收據文字搜尋,例如「拉麵」。</li>
+    <li><b>匯率一鍵抓取</b>:有網路時更新最新匯率。</li>
+    <li><b>跨旅程比較</b>、照片空間管理。</li>
+  </ul>
+
+  <h3>版本紀錄</h3>
+  <table>
+    <tr><th style="width:22mm">版本</th><th>內容</th></tr>
+    <tr><td>v0.5.0</td><td>行程規劃(今天/行程/帳本/統計分頁、待排、訂位、Google 地圖分享、為行程記一筆)、統計圖表、三個拍照按鈕、出發/回程分開選、新桌面圖示、標題顯示版本與作者。</td></tr>
+    <tr><td>v0.4.0</td><td>一頁式記一筆(名稱提示、日期時間、半螢幕計算機)、收據離線辨識、照片、直接開啟進行中旅程、字體大小設定。</td></tr>
+    <tr><td>v0.3.0</td><td>全新介面設計、淺色/深色模式、旅程封面、自訂分類圖示與顏色。</td></tr>
+    <tr><td>v0.2.0</td><td>記帳、幣別與匯率、分類與付款方式管理。</td></tr>
+    <tr><td>v0.1.0</td><td>建立、編輯、刪除旅程。</td></tr>
+  </table>
+  <p style="margin-top:14mm;text-align:center;color:var(--muted)">旅帳 · 作者 <span class="sign" style="font-size:16pt">ArchieKUO</span></p>
+</section>
+
+</body>
+</html>
