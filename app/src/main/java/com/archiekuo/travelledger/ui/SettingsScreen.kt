@@ -87,7 +87,14 @@ fun SettingsScreen(
             LedgerCard(Modifier.fillMaxWidth(), padding = PaddingValues(vertical = 2.dp)) {
                 SettingRow(Icons.Rounded.CurrencyExchange, Palette[6], "結算幣別", "新台幣(TWD)", null)
                 HorizontalDivider(Modifier.padding(start = 68.dp), color = ledger.hairline)
-                SettingRow(Icons.Rounded.Luggage, MaterialTheme.colorScheme.primary, "旅帳", "版本 $version · 資料只存在這支手機", null)
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    AppIcon(40.dp)
+                    Spacer(Modifier.width(14.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("旅帳", style = MaterialTheme.typography.bodyLarge)
+                        Text("版本 $version · 資料只存在這支手機", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 HorizontalDivider(color = ledger.hairline)
                 Row(
                     Modifier.fillMaxWidth().padding(vertical = 16.dp),

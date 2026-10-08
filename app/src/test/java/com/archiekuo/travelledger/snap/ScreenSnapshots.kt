@@ -72,7 +72,12 @@ class ScreenSnapshots {
         paparazzi.snapshot("${name}_dark") { AppTheme(ThemeMode.DARK, content = content) }
     }
 
-    @Test fun home() = both("home") { TripListScreen(trips, {}, {}, {}, today, "0.5.0") }
+    @Test fun home() = both("home") { TripListScreen(trips, {}, {}, {}, today, "0.5.2") }
+
+    /** Large system font + extra-large app font, dark: the header must not cut the signature. */
+    @Test fun homeXLDark() = paparazzi.snapshot {
+        AppTheme(ThemeMode.DARK, FontSize.XLARGE) { TripListScreen(trips.take(1), {}, {}, {}, today, "0.5.2") }
+    }
 
     private fun trip(tab: TripTab, day: LocalDate = today) = @Composable {
         TripScreen(trip, 4, expenses, plans, tab, {}, TripActions(), day)

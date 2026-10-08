@@ -85,20 +85,35 @@ fun TripListScreen(
 
 @Composable
 private fun HomeHeader(onSettings: () -> Unit, onAdd: (() -> Unit)?, version: String) {
-    Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconTile(Icons.Rounded.Luggage, MaterialTheme.colorScheme.primary, size = 36.dp, corner = 11.dp)
-        Spacer(Modifier.width(10.dp))
-        Text("旅帳", style = MaterialTheme.typography.titleLarge)
-        Spacer(Modifier.width(8.dp))
+    Row(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        AppIcon(44.dp)
+        Spacer(Modifier.width(12.dp))
+        // Name + version on one line, the author's signature underneath so it never gets cut off.
         Column(Modifier.weight(1f)) {
-            if (version.isNotEmpty()) Text("v$version", style = MaterialTheme.typography.labelMedium, color = ledger.textMuted)
-            AuthorSignature(16)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("旅帳", style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                if (version.isNotEmpty()) {
+                    Spacer(Modifier.width(8.dp))
+                    Text("v$version", style = MaterialTheme.typography.labelMedium, color = ledger.textMuted, maxLines = 1, modifier = Modifier.padding(bottom = 3.dp))
+                }
+            }
+            AuthorSignature(15)
         }
         if (onAdd != null) {
             FilledTonalIconButton(onAdd) { Icon(Icons.Rounded.Add, "新增旅程") }
         }
         IconButton(onSettings) { Icon(Icons.Rounded.Settings, "設定") }
     }
+}
+
+/** The launcher artwork, so the app looks the same on the home screen and inside. */
+@Composable
+fun AppIcon(size: androidx.compose.ui.unit.Dp) {
+    androidx.compose.foundation.Image(
+        androidx.compose.ui.res.painterResource(com.archiekuo.travelledger.R.mipmap.ic_launcher_art), null,
+        Modifier.size(size).clip(RoundedCornerShape(size * 0.28f)),
+        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+    )
 }
 
 @Composable
