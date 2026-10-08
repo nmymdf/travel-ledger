@@ -44,7 +44,7 @@
     display: flex; flex-direction: column;
     background: linear-gradient(160deg, #f6f6ff 0%, #ffffff 55%, #fff8ea 100%);
   }
-  .cover img { width: 46mm; height: 46mm; object-fit: cover; border-radius: 11mm; box-shadow: 0 6mm 14mm rgba(40, 40, 90, .18); }
+  .cover img { width: 46mm; height: 46mm; filter: drop-shadow(0 4mm 8mm rgba(40, 60, 120, .25)); }
   .cover .kicker { margin-top: 18mm; color: var(--primary); font-weight: 700; letter-spacing: 3pt; font-size: 11pt; }
   .cover h1 { font-size: 44pt; font-weight: 900; letter-spacing: 2pt; margin-top: 3mm; }
   .cover .sub { font-size: 15pt; color: var(--muted); margin-top: 2mm; }
@@ -111,7 +111,7 @@
 
 <!-- ───────────── 封面 ───────────── -->
 <section class="cover">
-  <img src="img/icon.webp" alt="">
+  <img src="img/icon.png" alt="">
   <div class="kicker">TRAVEL LEDGER</div>
   <h1>旅帳</h1>
   <div class="sub">使用說明書</div>
@@ -178,7 +178,7 @@
   <ol class="steps">
     <li>把 <b>app-release.apk</b> 存到手機,在檔案管理員或下載清單中點開。</li>
     <li>手機會詢問是否允許「安裝不明應用程式」,允許這個來源(例如 LINE、檔案管理員或瀏覽器)。</li>
-    <li>按「安裝」,完成後桌面會出現旅帳的行李箱圖示。</li>
+    <li>按「安裝」,完成後桌面會出現旅帳的錢包圖示。</li>
   </ol>
 
   <h3>更新到新版本</h3>
@@ -484,7 +484,7 @@
   <h3>版本紀錄</h3>
   <table>
     <tr><th style="width:22mm">版本</th><th>內容</th></tr>
-    <tr><td>v0.5.1</td><td>輸入名稱後按鍵盤「完成」直接回到計算機;加入完整的自動化測試(資料流程、資料庫升級、畫面操作)。</td></tr>
+    <tr><td>v0.5.1</td><td>新桌面圖示(錢包、飛機與鈔票);輸入名稱後按鍵盤「完成」直接回到計算機;加入完整的自動化測試(資料流程、資料庫升級、畫面操作)。</td></tr>
     <tr><td>v0.5.0</td><td>行程規劃(今天/行程/帳本/統計分頁、待排、訂位、Google 地圖分享、為行程記一筆)、統計圖表、三個拍照按鈕、出發/回程分開選、新桌面圖示、標題顯示版本與作者。</td></tr>
     <tr><td>v0.4.0</td><td>一頁式記一筆(名稱提示、日期時間、半螢幕計算機)、收據離線辨識、照片、直接開啟進行中旅程、字體大小設定。</td></tr>
     <tr><td>v0.3.0</td><td>全新介面設計、淺色/深色模式、旅程封面、自訂分類圖示與顏色。</td></tr>
