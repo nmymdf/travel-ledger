@@ -15,6 +15,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
@@ -202,10 +206,14 @@ private fun NameRow(s: EditState, suggestions: List<TitleSuggestion>, actions: E
             Icon(Icons.Rounded.Storefront, null, Modifier.size(22.dp), tint = cs.onSurfaceVariant)
             Spacer(Modifier.width(10.dp))
             val style = MaterialTheme.typography.titleMedium.copy(color = cs.onSurface)
+            val focus = LocalFocusManager.current
             BasicTextField(
                 s.title, { v -> actions.edit { it.copy(title = v) } }, Modifier.weight(1f),
                 singleLine = true, textStyle = style, cursorBrush = SolidColor(cs.primary),
                 interactionSource = interaction,
+                // "完成" closes the keyboard so the calculator comes back right away.
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
                 decorationBox = { inner ->
                     if (s.title.isEmpty()) Text("店家或項目名稱", style = style.copy(fontWeight = FontWeight.Normal), color = ledger.textMuted)
                     inner()
@@ -225,7 +233,8 @@ private fun NameRow(s: EditState, suggestions: List<TitleSuggestion>, actions: E
             if (shown.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(shown, key = { it.title }) { sg ->
-                        SuggestionChip(onClick = { actions.pickSuggestion(sg) }, label = { Text(sg.title, style = MaterialTheme.typography.bodyMedium) })
+                        val focus = LocalFocusManager.current
+                        SuggestionChip(onClick = { actions.pickSuggestion(sg); focus.clearFocus() }, label = { Text(sg.title, style = MaterialTheme.typography.bodyMedium) })
                     }
                 }
             }

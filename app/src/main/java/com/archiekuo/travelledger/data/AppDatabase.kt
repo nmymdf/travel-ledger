@@ -57,9 +57,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "travel-ledger.db")
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            Room.databaseBuilder(context, AppDatabase::class.java, "travel-ledger.db").setup().build()
+
+        /** Shared setup for the real database and the in-memory one used by tests. */
+        fun RoomDatabase.Builder<AppDatabase>.setup(): RoomDatabase.Builder<AppDatabase> =
+            addMigrations(*ALL_MIGRATIONS)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         listOf("吃", "交通", "購物", "住宿", "景點", "其他").forEachIndexed { i, n ->
@@ -70,6 +75,5 @@ abstract class AppDatabase : RoomDatabase() {
                         }
                     }
                 })
-                .build()
     }
 }

@@ -414,7 +414,7 @@ private fun Tag(text: String, color: Color) {
 }
 
 @Composable
-private fun PasteDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+internal fun PasteDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
