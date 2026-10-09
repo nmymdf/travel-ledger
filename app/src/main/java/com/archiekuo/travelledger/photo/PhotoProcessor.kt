@@ -122,13 +122,13 @@ object PhotoProcessor {
         return if (src.renameTo(dst)) dst.absolutePath else path
     }
 
-    /** Copies an image into the phone gallery under Pictures/旅帳. No permission needed on Android 10+. */
+    /** Copies an image into the phone gallery under Pictures/卡溜趴. No permission needed on Android 10+. */
     suspend fun saveToGallery(context: Context, source: Uri): Boolean = withContext(Dispatchers.IO) {
         runCatching {
             val values = ContentValues().apply {
-                put(MediaStore.Images.Media.DISPLAY_NAME, "旅帳_${System.currentTimeMillis()}.jpg")
+                put(MediaStore.Images.Media.DISPLAY_NAME, "卡溜趴_${System.currentTimeMillis()}.jpg")
                 put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/旅帳")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/卡溜趴")
             }
             val resolver = context.contentResolver
             val dest = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return@runCatching false

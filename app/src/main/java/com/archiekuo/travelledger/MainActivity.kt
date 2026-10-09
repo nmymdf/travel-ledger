@@ -21,7 +21,7 @@ import com.archiekuo.travelledger.ui.AppTheme
 import com.archiekuo.travelledger.ui.isDarkTheme
 
 class MainActivity : ComponentActivity() {
-    /** "分享 → 旅帳" from Google Maps or any app that shares text; a 旅帳 file opened or shared from LINE. */
+    /** "分享 → 卡溜趴" from Google Maps or any app that shares text; a 卡溜趴 file opened or shared from LINE. */
     private fun receiveShare(intent: Intent?) {
         if (intent?.action == Intent.ACTION_VIEW) {
             intent.data?.let { ImportInbox.pending = it }

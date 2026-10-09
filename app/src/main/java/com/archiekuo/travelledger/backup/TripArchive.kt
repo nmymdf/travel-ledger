@@ -191,14 +191,14 @@ object TripArchive {
     // ───────────────────────────── read ─────────────────────────────
 
     private fun readJson(zip: ZipFile, name: String): JSONObject {
-        val entry = zip.getEntry(name) ?: throw BadArchive("這不是旅帳的檔案")
+        val entry = zip.getEntry(name) ?: throw BadArchive("這不是卡溜趴的檔案")
         return JSONObject(zip.getInputStream(entry).use { it.readBytes().decodeToString() })
     }
 
     private fun openManifest(zip: ZipFile): JSONObject {
         val m = readJson(zip, "manifest.json")
-        if (m.optString("format") != FORMAT) throw BadArchive("這不是旅帳的檔案")
-        if (m.optInt("version") > VERSION) throw BadArchive("這個檔案來自較新版的旅帳,請先更新 App")
+        if (m.optString("format") != FORMAT) throw BadArchive("這不是卡溜趴的檔案")
+        if (m.optInt("version") > VERSION) throw BadArchive("這個檔案來自較新版的卡溜趴,請先更新 App")
         return m
     }
 
@@ -221,7 +221,7 @@ object TripArchive {
     } catch (e: BadArchive) {
         throw e
     } catch (e: Exception) {
-        throw BadArchive("這不是旅帳的檔案")
+        throw BadArchive("這不是卡溜趴的檔案")
     }
 
     // ───────────────────────────── import ─────────────────────────────

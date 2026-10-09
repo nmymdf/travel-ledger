@@ -188,7 +188,7 @@ class AppFlowTest {
     @Test fun companionOpensSharedTrip() {
         assertTrue(seen("還沒有旅程"))
         val organizer = com.archiekuo.travelledger.data.testDb()
-        val file = java.io.File(rule.activity.cacheDir, "旅帳-京都.zip")
+        val file = java.io.File(rule.activity.cacheDir, "卡溜趴-京都.zip")
         kotlinx.coroutines.runBlocking {
             val today = java.time.LocalDate.now().toEpochDay()
             val trip = organizer.tripDao().createTrip(

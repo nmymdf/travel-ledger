@@ -28,7 +28,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** A 旅帳 file opened from LINE, a file manager or "從檔案還原", waiting for the user to confirm. */
+/** A 卡溜趴 file opened from LINE, a file manager or "從檔案還原", waiting for the user to confirm. */
 object ImportInbox {
     var pending by mutableStateOf<Uri?>(null)
 }
@@ -37,8 +37,8 @@ object ImportInbox {
 object ArchiveFiles {
     private fun safe(name: String) = name.replace(Regex("""[\\/:*?"<>|\s]+"""), "_").take(40).ifBlank { "旅程" }
 
-    fun backupName(today: LocalDate = LocalDate.now()) = "旅帳備份-$today.zip"
-    fun tripName(tripName: String) = "旅帳-${safe(tripName)}.zip"
+    fun backupName(today: LocalDate = LocalDate.now()) = "卡溜趴備份-$today.zip"
+    fun tripName(tripName: String) = "卡溜趴-${safe(tripName)}.zip"
 
     /** Exports to cache/share/[fileName] and returns a content Uri other apps can read. */
     suspend fun exportForShare(
@@ -88,7 +88,7 @@ fun ShareTripDialog(tripName: String, myName: String, busy: Boolean, onDismiss: 
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "把「$tripName」的帳目和行程做成一個檔案,傳到 LINE 群組。同伴用旅帳打開就能看(只能看、不能改);你之後再分享一次,他們的會自動更新。",
+                    "把「$tripName」的帳目和行程做成一個檔案,傳到 LINE 群組。同伴用卡溜趴打開就能看(只能看、不能改);你之後再分享一次,他們的會自動更新。",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedTextField(
@@ -119,7 +119,7 @@ fun BackupDialog(busy: Boolean, onDismiss: () -> Unit, onSave: (photos: Boolean)
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    "所有旅程、帳目、行程、分類與付款方式會存成一個檔案。換手機時,在新手機的旅帳打開這個檔案就能還原。",
+                    "所有旅程、帳目、行程、分類與付款方式會存成一個檔案。換手機時,在新手機的卡溜趴打開這個檔案就能還原。",
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 CheckRow("包含照片", "收據、回憶照片與封面", photos) { photos = it }

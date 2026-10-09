@@ -227,7 +227,7 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
                     Text("把出發前做的功課放進來", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "想去的景點、要訂位的餐廳都可以先放進「待排」,之後再排到某一天。\n在 Google 地圖按「分享 → 旅帳」也能直接加入。",
+                        "想去的景點、要訂位的餐廳都可以先放進「待排」,之後再排到某一天。\n在 Google 地圖按「分享 → 卡溜趴」也能直接加入。",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(16.dp))

@@ -103,7 +103,7 @@ fun SettingsScreen(
                     AppIcon(40.dp)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("旅帳", style = MaterialTheme.typography.bodyLarge)
+                        Text("卡溜趴", style = MaterialTheme.typography.bodyLarge)
                         Text("版本 $version · 資料只存在這支手機,記得定期備份", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }

@@ -140,7 +140,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                         runCatching {
                             ArchiveFiles.exportForShare(context, db, ArchiveFiles.tripName(t.name), com.archiekuo.travelledger.backup.TripArchive.KIND_TRIP, listOf(t.id), photos, name)
                         }.onSuccess { uri ->
-                            ArchiveFiles.send(context, uri, "分享「${t.name}」", "旅帳:${t.name}(用旅帳 App 打開這個檔案)")
+                            ArchiveFiles.send(context, uri, "分享「${t.name}」", "卡溜趴:${t.name}(用卡溜趴 App 打開這個檔案)")
                         }.onFailure {
                             android.widget.Toast.makeText(context, "分享失敗", android.widget.Toast.LENGTH_LONG).show()
                         }
@@ -233,7 +233,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                         scope.launch {
                             runCatching {
                                 ArchiveFiles.exportForShare(context, db, ArchiveFiles.backupName(), com.archiekuo.travelledger.backup.TripArchive.KIND_BACKUP, db.tripDao().allIds(), photos, null)
-                            }.onSuccess { uri -> ArchiveFiles.send(context, uri, "旅帳備份", "旅帳備份檔") }
+                            }.onSuccess { uri -> ArchiveFiles.send(context, uri, "卡溜趴備份", "卡溜趴備份檔") }
                                 .also { backupDone(it.isSuccess) }
                         }
                     },

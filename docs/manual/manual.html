@@ -2,11 +2,11 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="utf-8">
-<title>旅帳 使用說明書</title>
+<title>卡溜趴 使用說明書</title>
 <!--
-  旅帳使用說明書原稿。修改這個檔案後執行:
+  卡溜趴使用說明書原稿。修改這個檔案後執行:
     PLAYWRIGHT_DIR=/opt/node-tools/node_modules node docs/manual/build.mjs
-  會重新產生 docs/manual/旅帳使用說明書.pdf。
+  會重新產生 docs/manual/卡溜趴使用說明書.pdf。
   截圖來自 app/src/test/snapshots/images(執行 recordPaparazziDebug 會更新)。
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -113,11 +113,11 @@
 <section class="cover">
   <img src="img/icon.png" alt="">
   <div class="kicker">TRAVEL LEDGER</div>
-  <h1>旅帳</h1>
+  <h1>卡溜趴</h1>
   <div class="sub">使用說明書</div>
   <p class="tagline">出國旅遊的記帳與行程規劃 App。記一筆只要三步,收據拍照自動辨識,出發前做的功課也能一起帶著走。</p>
   <div class="meta">
-    <div>適用版本 v0.7.0<br>文件日期 2026 年 10 月 9 日<br>Android 10 以上</div>
+    <div>適用版本 v0.7.1<br>文件日期 2026 年 10 月 9 日<br>Android 10 以上</div>
     <div style="text-align:right"><div style="font-size:10pt;color:var(--muted)">作者</div><span class="sign">ArchieKUO</span></div>
   </div>
 </section>
@@ -126,7 +126,7 @@
 <section class="chapter">
   <div class="chapter-head"><h2>目錄</h2></div>
   <ol class="toc">
-    <li><span class="n">1</span>認識旅帳<span class="d">它能做什麼、資料存在哪裡</span></li>
+    <li><span class="n">1</span>認識卡溜趴<span class="d">它能做什麼、資料存在哪裡</span></li>
     <li><span class="n">2</span>安裝與更新<span class="d">安裝 APK、覆蓋更新</span></li>
     <li><span class="n">3</span>建立旅程<span class="d">名稱、封面、日期、成員、匯率、預算</span></li>
     <li><span class="n">4</span>旅程畫面<span class="d">今天、行程、帳本、統計四個分頁</span></li>
@@ -145,8 +145,8 @@
 
 <!-- ───────────── 1 ───────────── -->
 <section class="chapter">
-  <div class="chapter-head"><span class="no">1</span><h2>認識旅帳</h2></div>
-  <p class="lead">旅帳以「旅程」為單位管理花費與行程。每趟旅程各自獨立,舊旅程永遠留著可以回顧。</p>
+  <div class="chapter-head"><span class="no">1</span><h2>認識卡溜趴</h2></div>
+  <p class="lead">卡溜趴以「旅程」為單位管理花費與行程。每趟旅程各自獨立,舊旅程永遠留著可以回顧。</p>
 
   <h3>主要功能</h3>
   <ul>
@@ -154,7 +154,7 @@
     <li><b>收據辨識</b>:拍下收據,自動讀出店家、金額、幣別、日期時間,確認後一鍵填入。</li>
     <li><b>行程規劃</b>:出發前把想去的景點、要訂位的餐廳放進來,排到每一天;旅途中逐項打勾,順手記帳。</li>
     <li><b>統計</b>:分類比例、每天花多少、付款方式,一眼看懂這趟花在哪裡。</li>
-    <li><b>分享給同伴</b>:一個人記帳,用 LINE 把旅程傳給同伴,同伴用旅帳打開就能看。</li>
+    <li><b>分享給同伴</b>:一個人記帳,用 LINE 把旅程傳給同伴,同伴用卡溜趴打開就能看。</li>
     <li><b>備份與還原</b>:所有資料存成一個檔案,換手機時還原。</li>
   </ul>
 
@@ -181,7 +181,7 @@
   <ol class="steps">
     <li>把 <b>app-release.apk</b> 存到手機,在檔案管理員或下載清單中點開。</li>
     <li>手機會詢問是否允許「安裝不明應用程式」,允許這個來源(例如 LINE、檔案管理員或瀏覽器)。</li>
-    <li>按「安裝」,完成後桌面會出現旅帳的錢包圖示。</li>
+    <li>按「安裝」,完成後桌面會出現卡溜趴的錢包圖示。</li>
   </ol>
 
   <h3>更新到新版本</h3>
@@ -192,9 +192,9 @@
   <h3>需要的權限</h3>
   <table>
     <tr><th style="width:38mm">項目</th><th>說明</th></tr>
-    <tr><td>相機</td><td>使用手機內建相機 App 拍照,旅帳本身不要求相機權限。</td></tr>
+    <tr><td>相機</td><td>使用手機內建相機 App 拍照,卡溜趴本身不要求相機權限。</td></tr>
     <tr><td>相簿</td><td>使用系統的照片選擇器,只會讀取你選的那張照片。</td></tr>
-    <tr><td>存到相簿</td><td>回憶照片會存到相簿的「旅帳」資料夾,Android 10 以上不需額外權限。</td></tr>
+    <tr><td>存到相簿</td><td>回憶照片會存到相簿的「卡溜趴」資料夾,Android 10 以上不需額外權限。</td></tr>
     <tr><td>網路</td><td>不需要。</td></tr>
   </table>
 </section>
@@ -319,7 +319,7 @@
 <!-- ───────────── 7 ───────────── -->
 <section class="chapter">
   <div class="chapter-head"><span class="no">7</span><h2>行程規劃</h2></div>
-  <p class="lead">出發前做的功課放進旅帳:想去的景點、要訂位的餐廳。可以先丟進「待排」,之後再排到某一天。</p>
+  <p class="lead">出發前做的功課放進卡溜趴:想去的景點、要訂位的餐廳。可以先丟進「待排」,之後再排到某一天。</p>
   <div class="phones two">
     <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_tabPlan_tabplan_light.png"><figcaption>行程(依天)</figcaption></figure>
     <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_planEdit_planedit_light.png"><figcaption>編輯行程</figcaption></figure>
@@ -330,7 +330,7 @@
     <tr><th style="width:34mm">方式</th><th>做法</th></tr>
     <tr><td>新增</td><td>行程分頁右上角「＋ 新增」,或某一天旁邊的「＋ 加入」(直接排到那天)。</td></tr>
     <tr><td>貼上多筆</td><td>按剪貼簿圖示,貼上整理好的清單,一行一個。會自動去掉編號、符號,並猜分類(例如「拉麵」→吃、「寺」→景點、「飯店」→住宿)。全部放進待排。</td></tr>
-    <tr><td>從 Google 地圖分享</td><td>在 Google 地圖打開一個地點 → 按「分享」→ 選「旅帳」。名稱和地圖連結自動帶入,加到目前旅程。</td></tr>
+    <tr><td>從 Google 地圖分享</td><td>在 Google 地圖打開一個地點 → 按「分享」→ 選「卡溜趴」。名稱和地圖連結自動帶入,加到目前旅程。</td></tr>
   </table>
 
   <h3>行程的內容</h3>
@@ -470,7 +470,7 @@
         <li>在旅程畫面右上角「⋮ → <b>分享給同伴</b>」。</li>
         <li>填你的名字(第一次填,之後會記住)。照片預設不包含,要的話勾「包含照片」(檔案會變大)。</li>
         <li>按「分享」,選 <b>LINE</b>,傳到旅伴群組。</li>
-        <li>同伴在 LINE 點檔案 →「用其他應用程式開啟」→ 選<b>旅帳</b>,確認後按「匯入」。</li>
+        <li>同伴在 LINE 點檔案 →「用其他應用程式開啟」→ 選<b>卡溜趴</b>,確認後按「匯入」。</li>
       </ol>
       <ul>
         <li>同伴手機上的這趟旅程是<b>唯讀</b>:上方顯示「唯讀 · 小明 分享 · 更新時間」,沒有「記一筆」,不能修改或刪除單筆。可以看帳本、統計、行程、支出明細,也能點地圖導航。</li>
@@ -484,7 +484,7 @@
     <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_importDialog.png"><figcaption>同伴打開檔案</figcaption></figure>
     <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_sharedLedger_sharedledger_light.png"><figcaption>同伴看到的唯讀旅程</figcaption></figure>
   </div>
-  <div class="note"><b>同伴需要安裝旅帳</b>目前只有 Android 版。iPhone 的同伴暫時無法打開這個檔案。</div>
+  <div class="note"><b>同伴需要安裝卡溜趴</b>目前只有 Android 版。iPhone 的同伴暫時無法打開這個檔案。</div>
 
   <h3 style="break-before: page">備份全部資料</h3>
   <div class="split">
@@ -494,15 +494,15 @@
         <li>選擇是否「包含照片」(收據、回憶照片與封面)。不含照片檔案很小;含照片檔案較大但換手機最完整。</li>
         <li><b>存到手機</b>:選一個資料夾(例如「下載」)存檔。<br><b>傳送到…</b>:傳到 LINE Keep、Google 雲端硬碟、Email 等,手機遺失也不怕。</li>
       </ol>
-      <p>檔名像「旅帳備份-2026-10-09.zip」。</p>
+      <p>檔名像「卡溜趴備份-2026-10-09.zip」。</p>
     </div>
     <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_backupDialog.png"><figcaption>備份</figcaption></figure>
   </div>
 
   <h3>還原(換手機、重裝)</h3>
   <ol class="steps">
-    <li>新手機安裝旅帳。</li>
-    <li>點備份檔用旅帳開啟,或在旅帳「設定 → <b>從檔案還原或匯入</b>」選擇備份檔。</li>
+    <li>新手機安裝卡溜趴。</li>
+    <li>點備份檔用卡溜趴開啟,或在卡溜趴「設定 → <b>從檔案還原或匯入</b>」選擇備份檔。</li>
     <li>確認後按「還原」。</li>
   </ol>
   <ul>
@@ -521,14 +521,14 @@
     <tr><td>改了預設匯率,舊的帳會變嗎?</td><td>不會。每筆支出記錄當時的匯率,只有之後新增的支出會用新的預設值。</td></tr>
     <tr><td>機票在出發前就付了怎麼記?</td><td>記一筆時把日期改成實際付款日即可,帳本會標示「出發前」,統計也會另列。</td></tr>
     <tr><td>收據辨識不準?</td><td>按「略過」自己輸入即可,照片仍會保存。可把收據照片回報給作者改進。</td></tr>
-    <tr><td>分享選單找不到旅帳?</td><td>在 Google 地圖的分享選單往右滑或按「更多」,找「旅帳」或「加入旅帳行程」。</td></tr>
-    <tr><td>字太小?</td><td>到手機「設定 → 顯示 → 字型大小」調大,或旅帳「設定 → 字體大小」選「大」或「特大」。</td></tr>
-    <tr><td>照片存在哪?</td><td>App 內部儲存空間,收據與回憶分開存放。回憶照片另外存一份在手機相簿的「旅帳」資料夾。</td></tr>
+    <tr><td>分享選單找不到卡溜趴?</td><td>在 Google 地圖的分享選單往右滑或按「更多」,找「卡溜趴」或「加入卡溜趴行程」。</td></tr>
+    <tr><td>字太小?</td><td>到手機「設定 → 顯示 → 字型大小」調大,或卡溜趴「設定 → 字體大小」選「大」或「特大」。</td></tr>
+    <tr><td>照片存在哪?</td><td>App 內部儲存空間,收據與回憶分開存放。回憶照片另外存一份在手機相簿的「卡溜趴」資料夾。</td></tr>
     <tr><td>刪除旅程會怎樣?</td><td>該旅程的所有支出、行程、App 內的照片都會刪除,無法復原。已存到手機相簿的照片不受影響。</td></tr>
-    <tr><td>換手機怎麼辦?</td><td>舊手機「設定 → 備份全部資料」(含照片),傳到 LINE Keep 或雲端硬碟;新手機安裝旅帳後打開這個檔案還原。</td></tr>
+    <tr><td>換手機怎麼辦?</td><td>舊手機「設定 → 備份全部資料」(含照片),傳到 LINE Keep 或雲端硬碟;新手機安裝卡溜趴後打開這個檔案還原。</td></tr>
     <tr><td>同伴可以一起記帳嗎?</td><td>目前是一個人記帳、分享給大家看。同伴的副本不能修改。</td></tr>
     <tr><td>同伴打開說「是你自己記的旅程」?</td><td>這是你自己分享出去的檔案,傳回自己手機不需要匯入,原本的旅程不受影響。</td></tr>
-    <tr><td>LINE 點檔案沒有出現旅帳?</td><td>在 LINE 檔案畫面按右上角「⋯」或分享鈕,選「用其他應用程式開啟」;或先存到手機,再從旅帳「設定 → 從檔案還原或匯入」選擇。</td></tr>
+    <tr><td>LINE 點檔案沒有出現卡溜趴?</td><td>在 LINE 檔案畫面按右上角「⋯」或分享鈕,選「用其他應用程式開啟」;或先存到手機,再從卡溜趴「設定 → 從檔案還原或匯入」選擇。</td></tr>
   </table>
 </section>
 
@@ -549,6 +549,7 @@
   <h3>版本紀錄</h3>
   <table>
     <tr><th style="width:22mm">版本</th><th>內容</th></tr>
+    <tr><td>v0.7.1</td><td>App 改名為「卡溜趴」(原「旅帳」),資料與覆蓋安裝不受影響;之後存到相簿的照片放在「卡溜趴」資料夾。</td></tr>
     <tr><td>v0.7.0</td><td>分享給同伴(用 LINE 傳旅程檔,同伴匯入後唯讀,再分享會更新);備份全部資料與還原(可選含照片);設定「我的名字」;正式簽章金鑰。</td></tr>
     <tr><td>v0.6.1</td><td>編輯旅程時可手動挑選封面插畫;照片封面可改回插畫。</td></tr>
     <tr><td>v0.6.0</td><td>旅程封面自動插畫:依名稱的主題與地點產生(秋楓、櫻花、雪景、海島、美食、城市),不需網路。</td></tr>
@@ -560,7 +561,7 @@
     <tr><td>v0.2.0</td><td>記帳、幣別與匯率、分類與付款方式管理。</td></tr>
     <tr><td>v0.1.0</td><td>建立、編輯、刪除旅程。</td></tr>
   </table>
-  <p style="margin-top:14mm;text-align:center;color:var(--muted)">旅帳 · 作者 <span class="sign" style="font-size:16pt">ArchieKUO</span></p>
+  <p style="margin-top:14mm;text-align:center;color:var(--muted)">卡溜趴 · 作者 <span class="sign" style="font-size:16pt">ArchieKUO</span></p>
 </section>
 
 </body>

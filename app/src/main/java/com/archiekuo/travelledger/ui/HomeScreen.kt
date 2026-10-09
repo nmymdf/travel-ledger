@@ -91,7 +91,7 @@ private fun HomeHeader(onSettings: () -> Unit, onAdd: (() -> Unit)?, version: St
         // Name + version on one line, the author's signature underneath so it never gets cut off.
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text("旅帳", style = MaterialTheme.typography.titleLarge, maxLines = 1)
+                Text("卡溜趴", style = MaterialTheme.typography.titleLarge, maxLines = 1)
                 if (version.isNotEmpty()) {
                     Spacer(Modifier.width(8.dp))
                     Text("v$version", style = MaterialTheme.typography.labelMedium, color = ledger.textMuted, maxLines = 1, modifier = Modifier.padding(bottom = 3.dp))

@@ -23,14 +23,14 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- Google Maps → 分享 → 旅帳: add the place to the trip's unscheduled list. -->
-            <intent-filter android:label="加入旅帳行程">
+            <!-- Google Maps → 分享 → 卡溜趴: add the place to the trip's unscheduled list. -->
+            <intent-filter android:label="加入卡溜趴行程">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
             <!-- A trip shared by a companion, or a backup: open it from LINE or a file manager. -->
-            <intent-filter android:label="用旅帳開啟">
+            <intent-filter android:label="用卡溜趴開啟">
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
@@ -40,7 +40,7 @@
                 <data android:mimeType="application/x-zip-compressed" />
                 <data android:mimeType="application/octet-stream" />
             </intent-filter>
-            <intent-filter android:label="匯入旅帳">
+            <intent-filter android:label="匯入卡溜趴">
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/zip" />
