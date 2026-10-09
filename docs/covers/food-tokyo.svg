@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <!-- 東京美食之旅:黃昏、富士山、東京鐵塔、城市剪影與燈籠 -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A2F72"/><stop offset="0.5" stop-color="#7A5AB8"/><stop offset="0.82" stop-color="#F29BB2"/><stop offset="1" stop-color="#FFC9A8"/>
+    </linearGradient>
+    <linearGradient id="fuji" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6E5AA8"/><stop offset="1" stop-color="#8E73C0"/>
+    </linearGradient>
+    <linearGradient id="lantern" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#C8261E"/><stop offset="0.5" stop-color="#F0503A"/><stop offset="1" stop-color="#C8261E"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky)"/>
+  <g fill="#FFFFFF">
+    <circle cx="90" cy="60" r="1.6" opacity=".8"/><circle cx="210" cy="35" r="1.2" opacity=".7"/><circle cx="420" cy="50" r="1.5" opacity=".8"/>
+    <circle cx="610" cy="30" r="1.2" opacity=".6"/><circle cx="740" cy="75" r="1.6" opacity=".8"/><circle cx="330" cy="95" r="1" opacity=".6"/>
+  </g>
+  <circle cx="650" cy="120" r="22" fill="#FFF4D6" opacity="0.95"/>
+  <!-- Mt Fuji -->
+  <path d="M120,330 L300,170 Q320,152 340,170 L520,330 Z" fill="url(#fuji)"/>
+  <path d="M262,204 L300,170 Q320,152 340,170 L378,204 L360,214 L343,203 L326,218 L309,203 L292,216 Z" fill="#FFFFFF" opacity="0.92"/>
+  <!-- Tokyo Tower -->
+  <g transform="translate(560 120)">
+    <path d="M0,240 L22,120 L26,40 L30,0 L34,40 L38,120 L60,240 Z" fill="#E8432B"/>
+    <path d="M14,165 L46,165 L44,175 L16,175 Z M20,118 L40,118 L40,126 L20,126 Z" fill="#FFFFFF"/>
+    <path d="M24,70 L36,70 L36,78 L24,78 Z" fill="#FFFFFF"/>
+    <path d="M10,205 L50,205" stroke="#B42A1A" stroke-width="3"/>
+  </g>
+  <!-- skyline -->
+  <g fill="#2B2350">
+    <rect x="0" y="315" width="70" height="135"/><rect x="62" y="290" width="48" height="160"/><rect x="104" y="330" width="60" height="120"/>
+    <rect x="160" y="300" width="40" height="150"/><rect x="196" y="340" width="80" height="110"/><rect x="270" y="310" width="45" height="140"/>
+    <rect x="312" y="335" width="70" height="115"/><rect x="380" y="295" width="52" height="155"/><rect x="430" y="325" width="70" height="125"/>
+    <rect x="495" y="345" width="60" height="105"/><rect x="630" y="300" width="50" height="150"/><rect x="676" y="330" width="62" height="120"/><rect x="734" y="305" width="66" height="145"/>
+  </g>
+  <g fill="#FFD27A" opacity="0.85">
+    <rect x="75" y="305" width="6" height="6"/><rect x="90" y="320" width="6" height="6"/><rect x="172" y="318" width="6" height="6"/><rect x="290" y="330" width="6" height="6"/>
+    <rect x="395" y="312" width="6" height="6"/><rect x="410" y="340" width="6" height="6"/><rect x="645" y="318" width="6" height="6"/><rect x="750" y="325" width="6" height="6"/>
+    <rect x="215" y="360" width="6" height="6"/><rect x="455" y="350" width="6" height="6"/><rect x="700" y="350" width="6" height="6"/>
+  </g>
+  <rect x="0" y="420" width="800" height="30" fill="#1C1738"/>
+  <!-- lanterns -->
+  <path d="M0,18 Q200,58 400,30 Q600,6 800,40" stroke="#1C1738" stroke-width="2" fill="none" opacity="0.6"/>
+  <g>
+    <g transform="translate(120 46)"><rect x="-2" y="-10" width="4" height="10" fill="#1C1738"/><rect x="-16" y="0" width="32" height="42" rx="15" fill="url(#lantern)"/><rect x="-12" y="-2" width="24" height="5" rx="2" fill="#2B1E1E"/><rect x="-12" y="40" width="24" height="5" rx="2" fill="#2B1E1E"/></g>
+    <g transform="translate(270 44)"><rect x="-2" y="-10" width="4" height="10" fill="#1C1738"/><rect x="-14" y="0" width="28" height="36" rx="13" fill="url(#lantern)"/><rect x="-10" y="-2" width="20" height="4" rx="2" fill="#2B1E1E"/><rect x="-10" y="34" width="20" height="4" rx="2" fill="#2B1E1E"/></g>
+    <g transform="translate(470 24)"><rect x="-2" y="-10" width="4" height="10" fill="#1C1738"/><rect x="-14" y="0" width="28" height="36" rx="13" fill="url(#lantern)"/><rect x="-10" y="-2" width="20" height="4" rx="2" fill="#2B1E1E"/><rect x="-10" y="34" width="20" height="4" rx="2" fill="#2B1E1E"/></g>
+  </g>
+  <!-- steaming ramen bowl -->
+  <g transform="translate(150 372)">
+    <path d="M-34,-6 H34 Q32,26 0,30 Q-32,26 -34,-6 Z" fill="#F7F1E8"/>
+    <path d="M-34,-6 H34" stroke="#C8261E" stroke-width="4"/>
+    <path d="M-10,-14 q4,-8 0,-14 M2,-16 q4,-8 0,-14 M14,-14 q4,-8 0,-14" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".85"/>
+    <path d="M18,-24 L40,-44 M24,-22 L46,-40" stroke="#E5C38A" stroke-width="3" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="800" height="450">
+  <!-- 沖繩夏日跳島:晴空、海灣、小島、椰子樹、白沙 -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3FA9F5"/><stop offset="1" stop-color="#BDEBFF"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1E88C8"/><stop offset="0.5" stop-color="#22B8C8"/><stop offset="1" stop-color="#6FE0D2"/>
+    </linearGradient>
+    <linearGradient id="sand" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF2D2"/><stop offset="1" stop-color="#F2D7A2"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFBE6"/><stop offset="0.5" stop-color="#FFF2B0" stop-opacity="0.7"/><stop offset="1" stop-color="#FFF2B0" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky)"/>
+  <circle cx="640" cy="90" r="110" fill="url(#sun)"/>
+  <circle cx="640" cy="90" r="38" fill="#FFF9DD"/>
+  <g fill="#FFFFFF" opacity="0.9">
+    <ellipse cx="170" cy="85" rx="60" ry="18"/><ellipse cx="205" cy="72" rx="38" ry="20"/><ellipse cx="140" cy="76" rx="28" ry="14"/>
+    <ellipse cx="420" cy="55" rx="44" ry="13"/><ellipse cx="445" cy="46" rx="26" ry="14"/>
+  </g>
+  <rect y="215" width="800" height="235" fill="url(#sea)"/>
+  <!-- islands -->
+  <path d="M330,222 C360,190 420,186 460,210 C470,216 480,220 490,222 Z" fill="#2E8B57"/>
+  <path d="M560,222 C580,205 615,203 640,222 Z" fill="#3AA36A"/>
+  <!-- wave lines -->
+  <g stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" fill="none" opacity="0.55">
+    <path d="M60,260 q15,-6 30,0 t30,0"/><path d="M520,280 q15,-6 30,0 t30,0"/><path d="M250,300 q15,-6 30,0 t30,0"/><path d="M640,330 q15,-6 30,0 t30,0"/>
+  </g>
+  <!-- seagulls -->
+  <g stroke="#355C7D" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M300,120 q8,-8 16,0 q8,-8 16,0"/><path d="M345,140 q6,-6 12,0 q6,-6 12,0"/>
+  </g>
+  <!-- beach -->
+  <path d="M0,330 C160,318 300,345 430,370 C560,395 700,385 800,372 V450 H0 Z" fill="url(#sand)"/>
+  <path d="M0,330 C160,318 300,345 430,370 C560,395 700,385 800,372" stroke="#FFFFFF" stroke-width="5" fill="none" opacity="0.8"/>
+  <!-- palm tree -->
+  <g transform="translate(120 400)">
+    <path d="M0,0 C10,-60 30,-130 70,-190" stroke="#8A5A2B" stroke-width="12" fill="none" stroke-linecap="round"/>
+    <g fill="#1F9D55">
+      <path d="M70,-190 C110,-210 150,-200 175,-170 C140,-185 110,-180 70,-190 Z"/>
+      <path d="M70,-190 C100,-170 120,-140 125,-105 C105,-135 90,-160 70,-190 Z"/>
+      <path d="M70,-190 C40,-215 0,-215 -30,-195 C5,-200 35,-197 70,-190 Z"/>
+      <path d="M70,-190 C45,-170 25,-140 18,-110 C38,-140 52,-165 70,-190 Z"/>
+      <path d="M70,-190 C80,-230 115,-250 145,-245 C112,-235 90,-215 70,-190 Z"/>
+    </g>
+    <circle cx="66" cy="-182" r="7" fill="#6B4423"/><circle cx="76" cy="-178" r="6" fill="#6B4423"/>
+  </g>
+  <!-- beach umbrella -->
+  <g transform="translate(600 390)">
+    <path d="M0,0 L-8,-70" stroke="#FFFFFF" stroke-width="4"/>
+    <path d="M-60,-62 Q-8,-120 44,-78 Z" fill="#FF6B6B"/>
+    <path d="M-60,-62 Q-40,-90 -8,-98 L-8,-70 Z" fill="#FFD166"/>
+  </g>
+</svg>
