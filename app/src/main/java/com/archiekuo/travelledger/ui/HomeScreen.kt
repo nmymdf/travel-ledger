@@ -161,6 +161,7 @@ private fun EmptyTrips(title: String, firstRun: Boolean) {
 @Composable
 private fun TripMeta(t: TripSummary) {
     Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        t.sharedBy?.let { MetaItem(Icons.Rounded.Visibility, "$it 分享") }
         if (t.memberCount > 0) MetaItem(Icons.Rounded.Group, "${t.memberCount} 人")
         t.currencies?.takeIf { it.isNotBlank() }?.let { MetaItem(Icons.Rounded.CurrencyExchange, it.replace(",", " · ")) }
     }

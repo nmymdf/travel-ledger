@@ -20,12 +20,14 @@ data class TripSummary(
     val memberCount: Int,
     /** Comma-separated foreign currencies used in this trip, or null. */
     val currencies: String?,
+    /** Non-null for a read-only copy someone shared with us. */
+    val sharedBy: String? = null,
 )
 
 @Dao
 interface TripDao {
     @Query(
-        """SELECT t.id, t.name, t.startDate, t.endDate, t.budget, t.coverPath, t.coverTheme,
+        """SELECT t.id, t.name, t.startDate, t.endDate, t.budget, t.coverPath, t.coverTheme, t.sharedBy,
                   COALESCE((SELECT SUM(homeAmount) FROM expense WHERE tripId = t.id), 0) AS totalHome,
                   (SELECT COUNT(*) FROM member WHERE tripId = t.id) AS memberCount,
                   (SELECT GROUP_CONCAT(currency) FROM
@@ -39,6 +41,15 @@ interface TripDao {
     suspend fun getTrips(): List<Trip>
 
     @Query("SELECT * FROM trip WHERE id = :id")
+    suspend fun getTrip(id: Long): Trip?
+
+    @Query("SELECT * FROM trip WHERE uuid = :uuid LIMIT 1")
+    suspend fun findByUuid(uuid: String): Trip?
+
+    @Query("SELECT * FROM trip_currency_rate WHERE tripId = :tripId")
+    suspend fun getRates(tripId: Long): List<TripCurrencyRate>
+
+    @Query("SELECT * FROM trip WHERE id = :id")
     fun observeTrip(id: Long): Flow<Trip?>
 
     @Query("SELECT * FROM member WHERE tripId = :tripId ORDER BY id")
@@ -46,6 +57,24 @@ interface TripDao {
 
     @Insert suspend fun insertTrip(trip: Trip): Long
     @Insert suspend fun insertMembers(members: List<Member>)
+    @Insert suspend fun insertMember(member: Member): Long
+
+    /** Every trip, archived or not, for a full backup. */
+    @Query("SELECT id FROM trip ORDER BY startDate")
+    suspend fun allIds(): List<Long>
+
+    @Query("DELETE FROM expense WHERE tripId = :tripId") suspend fun deleteExpenses(tripId: Long)
+    @Query("DELETE FROM plan_item WHERE tripId = :tripId") suspend fun deletePlans(tripId: Long)
+    @Query("DELETE FROM member WHERE tripId = :tripId") suspend fun deleteMembers(tripId: Long)
+
+    /** Empties a trip (photo rows go with their expenses) so an import can refill it under the same id. */
+    @Transaction
+    suspend fun clearContents(tripId: Long) {
+        deleteExpenses(tripId)
+        deletePlans(tripId)
+        deleteMembers(tripId)
+        deleteRates(tripId)
+    }
 
     @Transaction
     suspend fun createTrip(trip: Trip, memberNames: List<String>, rates: List<TripCurrencyRate>): Long {
@@ -128,6 +157,9 @@ interface ExpenseDao {
     @Query("SELECT * FROM expense WHERE id = :id")
     suspend fun get(id: Long): Expense?
 
+    @Query("SELECT * FROM expense WHERE tripId = :tripId ORDER BY id")
+    suspend fun forTrip(tripId: Long): List<Expense>
+
     @Query("SELECT * FROM expense WHERE tripId = :tripId ORDER BY createdAt DESC LIMIT 1")
     suspend fun latest(tripId: Long): Expense?
 
@@ -187,6 +219,9 @@ interface PlanDao {
     @Query("SELECT * FROM plan_item WHERE id = :id")
     suspend fun get(id: Long): PlanItem?
 
+    @Query("SELECT * FROM plan_item WHERE tripId = :tripId ORDER BY id")
+    suspend fun forTrip(tripId: Long): List<PlanItem>
+
     @Insert suspend fun insert(item: PlanItem): Long
     @Insert suspend fun insertAll(items: List<PlanItem>)
     @Update suspend fun update(item: PlanItem)
@@ -229,6 +264,12 @@ interface PhotoDao {
 interface LookupDao {
     @Query("SELECT * FROM category ORDER BY sortOrder, id")
     fun observeCategories(): Flow<List<Category>>
+
+    @Query("SELECT * FROM category ORDER BY sortOrder, id")
+    suspend fun getCategories(): List<Category>
+
+    @Query("SELECT * FROM payment_method ORDER BY sortOrder, id")
+    suspend fun getPaymentMethods(): List<PaymentMethod>
 
     @Query("SELECT * FROM payment_method ORDER BY sortOrder, id")
     fun observePaymentMethods(): Flow<List<PaymentMethod>>

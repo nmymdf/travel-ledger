@@ -162,5 +162,42 @@ class ScreenSnapshots {
         )
     }
 
-    @Test fun settings() = both("settings") { SettingsScreen(AppSettings(ThemeMode.DARK, FontSize.LARGE), {}, {}, {}, {}, "0.5.0") }
+    @Test fun settings() = both("settings") { SettingsScreen(AppSettings(ThemeMode.DARK, FontSize.LARGE, myName = "小明"), {}, {}, {}, {}, "0.7.0") }
+
+    // ── Sharing with companions ──
+    private val shared = trip.copy(sharedBy = "小明", sharedAt = java.time.LocalDateTime.of(2024, 6, 12, 21, 5).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
+
+    @Test fun sharedLedger() = both("sharedLedger") {
+        TripScreen(shared, 4, expenses, plans, TripTab.LEDGER, {}, TripActions(readOnly = true), today)
+    }
+    @Test fun sharedPlan() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) { TripScreen(shared, 4, expenses, plans, TripTab.PLAN, {}, TripActions(readOnly = true), today) }
+    }
+    @Test fun sharedExpense() = both("sharedExpense") {
+        ExpenseDetailScreen(editState.copy(note = "點了特製拉麵"), categories, methods, emptyList(), {}, {})
+    }
+    @Test fun sharedPlanDetail() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) {
+            PlanDetailScreen(
+                PlanItem(4, 1, "敘敘苑 燒肉", cat("吃"), d(6, 12), 19 * 60, PlanStatus.TODO, Reservation.BOOKED, "19:00 · 4 位 · AB123", "新宿區西新宿 1-26-2", 6000.0, "必點:特選牛舌"),
+                shared, categories, {}, {},
+            )
+        }
+    }
+    @Test fun shareDialog() = paparazzi.snapshot { AppTheme(ThemeMode.LIGHT) { ShareTripDialog("東京美食之旅", "小明", false, {}) { _, _ -> } } }
+    @Test fun backupDialog() = paparazzi.snapshot { AppTheme(ThemeMode.LIGHT) { BackupDialog(false, {}, {}, {}) } }
+    @Test fun importDialog() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) {
+            ImportConfirmDialog(
+                com.archiekuo.travelledger.backup.TripArchive.Summary(
+                    "trip", "小明", shared.sharedAt!!,
+                    listOf(com.archiekuo.travelledger.backup.TripArchive.TripInfo("u", "東京美食之旅", d(6, 10), d(6, 15), 32, 28450.0)), 0,
+                ),
+                setOf("u"), false, {}, {},
+            )
+        }
+    }
+    @Test fun homeWithShared() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) { TripListScreen(trips.take(1) + trips[1].copy(sharedBy = "阿姨") , {}, {}, {}, today, "0.7.0") }
+    }
 }

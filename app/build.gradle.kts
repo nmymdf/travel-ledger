@@ -1,9 +1,44 @@
+import java.security.KeyStore
+import java.security.MessageDigest
+import java.util.Base64
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.paparazzi)
+}
+
+/*
+ * Release signing. The key is NOT in this (public) repository. It is read from either
+ *   - env TRAVEL_LEDGER_KEYSTORE_B64 (base64 of the keystore file), or
+ *   - local.properties: travelLedger.keystore=/path/to/travel-ledger-release.keystore
+ * Installed copies of the app only accept updates signed with this exact key, so the build
+ * checks its fingerprint and refuses to produce a release APK with any other key.
+ */
+val releaseKeyFingerprint = "661000B556FC151FEC6D13B75D77D1FC5552265B796F7E733610AA42AAC730F4"
+val releaseKeystore: File? = run {
+    val b64 = System.getenv("TRAVEL_LEDGER_KEYSTORE_B64")
+    if (!b64.isNullOrBlank()) {
+        layout.buildDirectory.file("signing/release.keystore").get().asFile.apply {
+            parentFile.mkdirs()
+            writeBytes(Base64.getMimeDecoder().decode(b64))
+        }
+    } else {
+        val props = Properties().apply {
+            rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+        }
+        props.getProperty("travelLedger.keystore")?.let { file(it) }?.takeIf { it.exists() }
+    }
+}
+val releaseStorePassword = System.getenv("TRAVEL_LEDGER_KEYSTORE_PASSWORD") ?: "android"
+
+fun keystoreFingerprint(f: File): String {
+    val ks = KeyStore.getInstance(KeyStore.getDefaultType()).apply { f.inputStream().use { load(it, releaseStorePassword.toCharArray()) } }
+    val cert = ks.getCertificate(ks.aliases().nextElement())
+    return MessageDigest.getInstance("SHA-256").digest(cert.encoded).joinToString("") { "%02X".format(it) }
 }
 
 android {
@@ -16,8 +51,19 @@ android {
         targetSdk = 35
         // Personal phone is 64-bit ARM; keeps the bundled OCR native libraries small.
         ndk { abiFilters += "arm64-v8a" }
-        versionCode = 9
-        versionName = "0.6.1"
+        versionCode = 10
+        versionName = "0.7.0"
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseKeystore != null) {
+                storeFile = releaseKeystore
+                storePassword = releaseStorePassword
+                keyAlias = "androiddebugkey"
+                keyPassword = releaseStorePassword
+            }
+        }
     }
 
     buildTypes {
@@ -25,8 +71,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Personal-use app: sign with the debug key so the release APK installs directly.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
@@ -105,4 +150,15 @@ tasks.withType<Test>().configureEach {
     dependsOn(copyRobolectricRuntime)
     systemProperty("robolectric.offline", "true")
     systemProperty("robolectric.dependency.dir", robolectricDepsDir.get().asFile.absolutePath)
+}
+
+// Refuse to build a release APK that phones with the app installed could not update to.
+tasks.matching { it.name == "assembleRelease" || it.name == "packageRelease" }.configureEach {
+    doFirst {
+        val ks = releaseKeystore ?: throw GradleException(
+            "缺少正式簽章金鑰:設定環境變數 TRAVEL_LEDGER_KEYSTORE_B64,或在 local.properties 加上 travelLedger.keystore=<路徑>",
+        )
+        val fp = keystoreFingerprint(ks)
+        if (fp != releaseKeyFingerprint) throw GradleException("簽章金鑰不符(指紋 $fp),已安裝的 App 無法用它更新")
+    }
 }

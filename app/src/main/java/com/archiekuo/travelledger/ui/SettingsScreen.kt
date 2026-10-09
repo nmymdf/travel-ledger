@@ -11,7 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,7 +31,10 @@ fun SettingsScreen(
     onCategories: () -> Unit,
     onMethods: () -> Unit,
     version: String,
+    onBackup: () -> Unit = {},
+    onRestore: () -> Unit = {},
 ) {
+    var editName by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = { AppTopBar("設定", onBack = onBack) },
@@ -83,6 +86,15 @@ fun SettingsScreen(
                 SettingRow(Icons.Rounded.CreditCard, Palette[0], "付款方式管理", "現金、信用卡、行動支付…", onMethods)
             }
 
+            SectionHeader("備份與分享")
+            LedgerCard(Modifier.fillMaxWidth(), padding = PaddingValues(vertical = 2.dp)) {
+                SettingRow(Icons.Rounded.Person, Palette[4], "我的名字", settings.myName.ifBlank { "分享旅程給同伴時顯示" }) { editName = true }
+                HorizontalDivider(Modifier.padding(start = 68.dp), color = ledger.hairline)
+                SettingRow(Icons.Rounded.Backup, Palette[2], "備份全部資料", "換手機前先備份,可選擇含不含照片", onBackup)
+                HorizontalDivider(Modifier.padding(start = 68.dp), color = ledger.hairline)
+                SettingRow(Icons.Rounded.SettingsBackupRestore, Palette[5], "從檔案還原或匯入", "備份檔,或同伴分享的旅程", onRestore)
+            }
+
             SectionHeader("關於")
             LedgerCard(Modifier.fillMaxWidth(), padding = PaddingValues(vertical = 2.dp)) {
                 SettingRow(Icons.Rounded.CurrencyExchange, Palette[6], "結算幣別", "新台幣(TWD)", null)
@@ -92,7 +104,7 @@ fun SettingsScreen(
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text("旅帳", style = MaterialTheme.typography.bodyLarge)
-                        Text("版本 $version · 資料只存在這支手機", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("版本 $version · 資料只存在這支手機,記得定期備份", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 HorizontalDivider(color = ledger.hairline)
@@ -104,6 +116,11 @@ fun SettingsScreen(
                     AuthorSignature(22)
                 }
             }
+        }
+    }
+    if (editName) {
+        TextInputDialog("我的名字", "同伴會看到這個名字", initial = settings.myName, onDismiss = { editName = false }) {
+            onSettings(settings.copy(myName = it.take(20))); editName = false
         }
     }
 }

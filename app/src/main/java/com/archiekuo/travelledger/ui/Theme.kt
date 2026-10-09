@@ -31,6 +31,8 @@ data class AppSettings(
     val fontSize: FontSize = FontSize.STANDARD,
     /** Copy "memory" photos to the phone gallery automatically. */
     val saveMemoriesToGallery: Boolean = true,
+    /** Shown on trips shared with companions. */
+    val myName: String = "",
 )
 
 object AppPrefs {
@@ -42,6 +44,7 @@ object AppPrefs {
             theme = p.getString("theme_mode", null)?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
             fontSize = p.getString("font_size", null)?.let { runCatching { FontSize.valueOf(it) }.getOrNull() } ?: FontSize.STANDARD,
             saveMemoriesToGallery = p.getBoolean("save_memories", true),
+            myName = p.getString("my_name", "") ?: "",
         )
     }
 
@@ -50,6 +53,7 @@ object AppPrefs {
             .putString("theme_mode", s.theme.name)
             .putString("font_size", s.fontSize.name)
             .putBoolean("save_memories", s.saveMemoriesToGallery)
+            .putString("my_name", s.myName)
             .apply()
     }
 }

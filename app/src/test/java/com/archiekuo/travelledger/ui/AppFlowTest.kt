@@ -4,11 +4,14 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.performImeAction
 import androidx.compose.ui.test.performTextInput
 import com.archiekuo.travelledger.MainActivity
@@ -179,5 +182,38 @@ class AppFlowTest {
         assertTrue(seen("刪除這筆支出?"))
         rule.onAllNodes(hasText("刪除") and hasClickAction()).onFirst().performClick()
         assertTrue(seen("還沒有支出"))
+    }
+
+    /** A companion opens the file the organizer sent on LINE: confirm, then browse the read-only copy. */
+    @Test fun companionOpensSharedTrip() {
+        assertTrue(seen("還沒有旅程"))
+        val organizer = com.archiekuo.travelledger.data.testDb()
+        val file = java.io.File(rule.activity.cacheDir, "旅帳-京都.zip")
+        kotlinx.coroutines.runBlocking {
+            val today = java.time.LocalDate.now().toEpochDay()
+            val trip = organizer.tripDao().createTrip(
+                com.archiekuo.travelledger.data.Trip(name = "京都賞楓", startDate = today, endDate = today + 3), listOf("我", "小美"), emptyList(),
+            )
+            organizer.expenseDao().insert(
+                com.archiekuo.travelledger.data.Expense(
+                    tripId = trip, date = today, amount = 2400.0, currency = "TWD", rate = 1.0, homeAmount = 2400.0,
+                    categoryId = null, paymentMethodId = null, payerId = null, title = "湯豆腐", minuteOfDay = 12 * 60,
+                ),
+            )
+            file.outputStream().use { com.archiekuo.travelledger.backup.TripArchive.export(organizer, it, "trip", listOf(trip), false, "小明") }
+        }
+        organizer.close()
+
+        rule.runOnUiThread { ImportInbox.pending = android.net.Uri.fromFile(file) }
+        assertTrue("confirmation names the sender", seen("小明 分享的旅程"))
+        tap("匯入")
+
+        // The copy opens: banner, no 記一筆, and expenses open as details.
+        assertTrue(rule.onRoot().printToString(), seen("唯讀 · 小明 分享"))
+        assertTrue(rule.onAllNodesWithContentDescription("記一筆").fetchSemanticsNodes().isEmpty())
+        tap("帳本")
+        tap("湯豆腐")
+        assertTrue(seen("支出明細"))
+        assertTrue(rule.onAllNodesWithText("儲存").fetchSemanticsNodes().isEmpty())
     }
 }

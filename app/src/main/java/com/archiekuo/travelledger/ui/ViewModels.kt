@@ -46,7 +46,8 @@ const val PRE_TRIP_DAYS = 30L
 /** The trip to open on launch: ongoing, else the nearest one starting within [PRE_TRIP_DAYS]. */
 fun currentTrip(trips: List<Trip>, today: LocalDate): Trip? {
     val t = today.toEpochDay()
-    return trips.filter { t in (it.startDate - PRE_TRIP_DAYS)..it.endDate }.minByOrNull { it.startDate }
+    // A trip of our own wins over one a companion shared for the same dates.
+    return trips.filter { t in (it.startDate - PRE_TRIP_DAYS)..it.endDate }.minWithOrNull(compareBy({ it.readOnly }, { it.startDate }))
 }
 
 class TripListViewModel(private val db: AppDatabase) : ViewModel() {
@@ -56,7 +57,8 @@ class TripListViewModel(private val db: AppDatabase) : ViewModel() {
         viewModelScope.launch { onCreated(db.tripDao().createTrip(trip, members, rates)) }
     }
 
-    suspend fun currentTripId(today: LocalDate): Long? = currentTrip(db.tripDao().getTrips(), today)?.id
+    suspend fun currentTripId(today: LocalDate, ownOnly: Boolean = false): Long? =
+        currentTrip(db.tripDao().getTrips().filter { !ownOnly || !it.readOnly }, today)?.id
 }
 
 class TripDetailViewModel(private val db: AppDatabase, private val id: Long) : ViewModel() {

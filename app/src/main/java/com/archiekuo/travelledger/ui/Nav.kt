@@ -42,14 +42,14 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
     LaunchedEffect(Unit) {
         if (!launched) {
             launched = true
-            if (SharedPlaceInbox.pending == null) listVm.currentTripId(LocalDate.now())?.let { nav.navigate("trip/$it") }
+            if (SharedPlaceInbox.pending == null && ImportInbox.pending == null) listVm.currentTripId(LocalDate.now())?.let { nav.navigate("trip/$it") }
         }
     }
     // A place shared from a map app goes to the current (or most recent) trip's unscheduled list.
     val shared = SharedPlaceInbox.pending
     LaunchedEffect(shared) {
         if (shared != null) {
-            val id = listVm.currentTripId(LocalDate.now()) ?: db.tripDao().getTrips().firstOrNull()?.id
+            val id = listVm.currentTripId(LocalDate.now(), ownOnly = true) ?: db.tripDao().getTrips().firstOrNull { !it.readOnly }?.id
             if (id == null) {
                 android.widget.Toast.makeText(context, "請先建立一趟旅程", android.widget.Toast.LENGTH_LONG).show()
                 SharedPlaceInbox.pending = null
@@ -64,6 +64,11 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
         else android.net.Uri.parse("geo:0,0?q=" + android.net.Uri.encode(listOf(title, location).filter { it.isNotBlank() }.joinToString(" ")))
         runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)) }
             .onFailure { android.widget.Toast.makeText(context, "找不到地圖 App", android.widget.Toast.LENGTH_SHORT).show() }
+    }
+
+    ImportHost(db) { id ->
+        if (id != null) nav.navigate("trip/$id") { popUpTo("trips") }
+        else if (!nav.popBackStack("trips", inclusive = false)) nav.navigate("trips")
     }
 
     NavHost(nav, startDestination = "trips") {
@@ -104,6 +109,10 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
             val expenses by vm.expenses.collectAsStateWithLifecycle()
             val plans by vm.plans.collectAsStateWithLifecycle()
             var tab by rememberSaveable { mutableStateOf<TripTab?>(null) }
+            var sharing by remember { mutableStateOf(false) }
+            var shareBusy by remember { mutableStateOf(false) }
+            val scope = rememberCoroutineScope()
+            val readOnly = trip?.readOnly == true
             TripScreen(
                 trip, members.size, expenses, plans, tab, { t -> tab = t },
                 TripActions(
@@ -118,8 +127,28 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     movePlans = { ids, date -> vm.movePlans(ids, date) },
                     pastePlans = { text, date -> vm.addParsed(com.archiekuo.travelledger.logic.PlanParser.parseLines(text), date) },
                     openMap = { p -> openMap(p.title, p.location) },
+                    share = { sharing = true },
+                    readOnly = readOnly,
                 ),
             )
+            val t = trip
+            if (sharing && t != null) {
+                ShareTripDialog(t.name, settings.myName, shareBusy, onDismiss = { sharing = false }) { name, photos ->
+                    if (name != settings.myName) onSettings(settings.copy(myName = name))
+                    shareBusy = true
+                    scope.launch {
+                        runCatching {
+                            ArchiveFiles.exportForShare(context, db, ArchiveFiles.tripName(t.name), com.archiekuo.travelledger.backup.TripArchive.KIND_TRIP, listOf(t.id), photos, name)
+                        }.onSuccess { uri ->
+                            ArchiveFiles.send(context, uri, "分享「${t.name}」", "旅帳:${t.name}(用旅帳 App 打開這個檔案)")
+                        }.onFailure {
+                            android.widget.Toast.makeText(context, "分享失敗", android.widget.Toast.LENGTH_LONG).show()
+                        }
+                        shareBusy = false
+                        sharing = false
+                    }
+                }
+            }
         }
         composable(
             "trip/{id}/expense/{eid}?plan={plan}",
@@ -133,7 +162,8 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                 key = "expense$id/$eid/$plan",
                 factory = viewModelFactory { initializer { ExpenseEditViewModel(app, db, id, eid, settings.saveMemoriesToGallery, plan) } },
             )
-            ExpenseEditRoute(vm, eid == null, onDone = { nav.popBackStack() })
+            val readOnly by produceState(false, id) { value = db.tripDao().getTrip(id)?.readOnly == true }
+            ExpenseEditRoute(vm, eid == null, readOnly, onDone = { nav.popBackStack() })
         }
         composable(
             "trip/{id}/plan/{pid}?date={date}&shared={shared}",
@@ -156,6 +186,11 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                 },
             )
             val categories by vm.categories.collectAsStateWithLifecycle()
+            val readOnly = vm.trip?.readOnly == true
+            if (readOnly) {
+                PlanDetailScreen(vm.item, vm.trip, categories, onBack = { nav.popBackStack() }) { p -> openMap(p.title, p.location) }
+                return@composable
+            }
             PlanEditScreen(
                 vm.item, vm.trip, categories, isNew = pid == null,
                 PlanActions(
@@ -169,12 +204,49 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
             )
         }
         composable("settings") {
+            val scope = rememberCoroutineScope()
+            var backingUp by remember { mutableStateOf(false) }
+            var backupBusy by remember { mutableStateOf(false) }
+            var backupPhotos by remember { mutableStateOf(true) }
+            fun backupDone(ok: Boolean) {
+                backupBusy = false
+                backingUp = false
+                if (!ok) android.widget.Toast.makeText(context, "備份失敗", android.widget.Toast.LENGTH_LONG).show()
+            }
+            val saveTo = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { target ->
+                if (target == null) { backupBusy = false; return@rememberLauncherForActivityResult }
+                scope.launch {
+                    val ok = runCatching { ArchiveFiles.exportTo(context, db, target, db.tripDao().allIds(), backupPhotos) }.isSuccess
+                    if (ok) android.widget.Toast.makeText(context, "已備份", android.widget.Toast.LENGTH_SHORT).show()
+                    backupDone(ok)
+                }
+            }
+            val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                if (uri != null) ImportInbox.pending = uri
+            }
+            if (backingUp) {
+                BackupDialog(
+                    backupBusy, onDismiss = { backingUp = false },
+                    onSave = { photos -> backupPhotos = photos; backupBusy = true; saveTo.launch(ArchiveFiles.backupName()) },
+                    onSend = { photos ->
+                        backupBusy = true
+                        scope.launch {
+                            runCatching {
+                                ArchiveFiles.exportForShare(context, db, ArchiveFiles.backupName(), com.archiekuo.travelledger.backup.TripArchive.KIND_BACKUP, db.tripDao().allIds(), photos, null)
+                            }.onSuccess { uri -> ArchiveFiles.send(context, uri, "旅帳備份", "旅帳備份檔") }
+                                .also { backupDone(it.isSuccess) }
+                        }
+                    },
+                )
+            }
             SettingsScreen(
                 settings, onSettings,
                 onBack = { nav.popBackStack() },
                 onCategories = { nav.navigate("settings/categories") },
                 onMethods = { nav.navigate("settings/methods") },
                 version = BuildConfig.VERSION_NAME,
+                onBackup = { backingUp = true },
+                onRestore = { openFile.launch(arrayOf("application/zip", "application/octet-stream", "application/x-zip-compressed", "*/*")) },
             )
         }
         composable("settings/categories") {
@@ -217,7 +289,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
 
 /** Expense editor wired to the camera, photo picker and gallery. */
 @Composable
-private fun ExpenseEditRoute(vm: ExpenseEditViewModel, isNew: Boolean, onDone: () -> Unit) {
+private fun ExpenseEditRoute(vm: ExpenseEditViewModel, isNew: Boolean, readOnly: Boolean, onDone: () -> Unit) {
     val context = LocalContext.current
     val categories by vm.categories.collectAsStateWithLifecycle()
     val methods by vm.methods.collectAsStateWithLifecycle()
@@ -238,6 +310,17 @@ private fun ExpenseEditRoute(vm: ExpenseEditViewModel, isNew: Boolean, onDone: (
         camera.launch(uri)
     }
     androidx.activity.compose.BackHandler { vm.cancel(); onDone() }
+    if (readOnly) {
+        ExpenseDetailScreen(
+            vm.state, categories, methods, vm.photos, onBack = { vm.cancel(); onDone() },
+            onSavePhoto = { i ->
+                vm.savePhotoToGallery(i) { ok ->
+                    android.widget.Toast.makeText(context, if (ok) "已存到相簿" else "存檔失敗", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            },
+        )
+        return
+    }
     ExpenseEditScreen(
         state = vm.state, isNew = isNew, categories = categories, methods = methods,
         photos = vm.photos, suggestions = vm.suggestions, currencies = vm.tripCurrencies,

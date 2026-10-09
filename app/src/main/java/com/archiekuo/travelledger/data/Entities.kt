@@ -25,7 +25,15 @@ data class Trip(
     val coverPath: String? = null,
     /** Illustration chosen by hand (CoverTheme name), or null to pick it from the trip name. */
     val coverTheme: String? = null,
-)
+    /** Stable identity across phones, so a re-shared trip updates the copy instead of duplicating it. */
+    @ColumnInfo(defaultValue = "") val uuid: String = java.util.UUID.randomUUID().toString(),
+    /** Who shared this trip with us; non-null means it is a read-only copy. */
+    val sharedBy: String? = null,
+    /** When the shared copy was made (epoch millis). */
+    val sharedAt: Long? = null,
+) {
+    val readOnly: Boolean get() = sharedBy != null
+}
 
 @Entity(
     tableName = "trip_currency_rate",

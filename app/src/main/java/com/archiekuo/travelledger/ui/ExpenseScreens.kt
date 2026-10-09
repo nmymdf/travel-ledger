@@ -279,7 +279,7 @@ private fun PhotoButton(label: String, icon: androidx.compose.ui.graphics.vector
 }
 
 @Composable
-private fun PhotoStrip(photos: List<PhotoItem>, onOpen: (Int) -> Unit) {
+internal fun PhotoStrip(photos: List<PhotoItem>, onOpen: (Int) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         photos.forEachIndexed { i, p ->
             Box(Modifier.size(72.dp).clip(RoundedCornerShape(14.dp)).clickable { onOpen(i) }) {

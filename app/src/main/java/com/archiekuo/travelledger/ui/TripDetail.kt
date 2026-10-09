@@ -53,6 +53,9 @@ data class TripActions(
     val movePlans: (List<Long>, Long?) -> Unit = { _, _ -> },
     val pastePlans: (String, Long?) -> Unit = { _, _ -> },
     val openMap: (PlanRow) -> Unit = {},
+    val share: () -> Unit = {},
+    /** A trip shared with us: everything can be viewed, nothing added or changed. */
+    val readOnly: Boolean = false,
 )
 
 /** The trip shell: switcher header, four tabs and a central "記一筆" button. */
@@ -100,7 +103,8 @@ fun TripScreen(
                 Box {
                     IconButton({ menu = true }) { Icon(Icons.Rounded.MoreVert, "更多") }
                     DropdownMenu(menu, { menu = false }) {
-                        DropdownMenuItem(text = { Text("編輯旅程") }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; actions.edit() })
+                        if (!actions.readOnly) DropdownMenuItem(text = { Text("編輯旅程") }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; actions.edit() })
+                        DropdownMenuItem(text = { Text("分享給同伴") }, leadingIcon = { Icon(Icons.Rounded.IosShare, null) }, onClick = { menu = false; actions.share() })
                         DropdownMenuItem(text = { Text("所有旅程") }, leadingIcon = { Icon(Icons.Rounded.Luggage, null) }, onClick = { menu = false; actions.switchTrip() })
                         DropdownMenuItem(
                             text = { Text("刪除旅程", color = MaterialTheme.colorScheme.error) },
@@ -111,10 +115,12 @@ fun TripScreen(
                 }
             }
         },
-        bottomBar = { TripBottomBar(current, onTab) { actions.addExpense(null) } },
+        bottomBar = { TripBottomBar(current, onTab, if (actions.readOnly) null else ({ actions.addExpense(null) })) },
     ) { pad ->
         val t = trip ?: return@Scaffold
-        val inner = PaddingValues(top = pad.calculateTopPadding(), bottom = pad.calculateBottomPadding())
+        val banner = if (t.readOnly) 48.dp else 0.dp
+        if (t.readOnly) ReadOnlyBanner(t, Modifier.padding(top = pad.calculateTopPadding()).padding(horizontal = 16.dp).height(40.dp))
+        val inner = PaddingValues(top = pad.calculateTopPadding() + banner, bottom = pad.calculateBottomPadding())
         when (current) {
             TripTab.TODAY -> TodayTab(t, plans, expenses, today, inner, actions) { onTab(it) }
             TripTab.PLAN -> PlanTab(t, plans, inner, actions)
@@ -128,7 +134,12 @@ fun TripScreen(
             onDismissRequest = { confirmDelete = false },
             icon = { Icon(Icons.Rounded.DeleteOutline, null) },
             title = { Text("刪除這趟旅程?") },
-            text = { Text("旅程內的所有帳目、行程與照片都會一併刪除,無法復原。") },
+            text = {
+                Text(
+                    if (trip?.readOnly == true) "只會刪除你手機上的這份副本,不影響${trip.sharedBy}的資料。"
+                    else "旅程內的所有帳目、行程與照片都會一併刪除,無法復原。",
+                )
+            },
             confirmButton = { TextButton({ confirmDelete = false; actions.delete() }) { Text("刪除", color = MaterialTheme.colorScheme.error) } },
             dismissButton = { TextButton({ confirmDelete = false }) { Text("取消") } },
         )
@@ -136,18 +147,18 @@ fun TripScreen(
 }
 
 @Composable
-private fun TripBottomBar(current: TripTab, onTab: (TripTab) -> Unit, onAdd: () -> Unit) {
+private fun TripBottomBar(current: TripTab, onTab: (TripTab) -> Unit, onAdd: (() -> Unit)?) {
     val cs = MaterialTheme.colorScheme
     Box(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().align(Alignment.BottomCenter).background(cs.surfaceContainerLowest)) {
             HorizontalDivider(color = ledger.hairline)
             Row(Modifier.fillMaxWidth().navigationBarsPadding().height(66.dp), verticalAlignment = Alignment.CenterVertically) {
                 listOf(TripTab.TODAY, TripTab.PLAN).forEach { TabItem(it, it == current, Modifier.weight(1f)) { onTab(it) } }
-                Spacer(Modifier.weight(1f))
+                if (onAdd != null) Spacer(Modifier.weight(1f))
                 listOf(TripTab.LEDGER, TripTab.STATS).forEach { TabItem(it, it == current, Modifier.weight(1f)) { onTab(it) } }
             }
         }
-        Column(
+        if (onAdd != null) Column(
             Modifier.align(Alignment.TopCenter).navigationBarsPadding().offset(y = (-14).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -196,7 +207,7 @@ private fun LedgerTab(trip: Trip, memberCount: Int, expenses: List<ExpenseRow>, 
         item { SummaryCard(t, memberCount, expenses, today) }
         if (expenses.isNotEmpty()) item { CategoryCard(expenses, filter) { filter = if (filter == it) null else it } }
         if (expenses.isEmpty()) {
-            item { EmptyHint(Icons.Rounded.ReceiptLong, "還沒有支出", "點下方「記一筆」記下第一筆") }
+            item { EmptyHint(Icons.Rounded.ReceiptLong, "還沒有支出", if (actions.readOnly) "對方分享時還沒有記帳" else "點下方「記一筆」記下第一筆") }
         }
         days.forEach { (date, rows) ->
             item(key = "h$date") { DayHeader(t, date, fmtMoney(rows.sumOf { it.homeAmount })) }

@@ -30,6 +30,8 @@ fun PhotoViewer(
     onType: (Int, String) -> Unit,
     onDelete: (Int) -> Unit,
     onSave: (Int) -> Unit,
+    /** False for a trip shared with us: only saving to the gallery is offered. */
+    editable: Boolean = true,
 ) {
     BackHandler(onBack = onClose)
     val pager = rememberPagerState(initialPage = start) { photos.size }
@@ -52,12 +54,12 @@ fun PhotoViewer(
         val i = pager.currentPage.coerceIn(0, photos.lastIndex)
         val current = photos[i]
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (editable) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 TypeOption("收據", Icons.Rounded.Receipt, current.type == PhotoType.RECEIPT, Modifier.weight(1f)) { onType(i, PhotoType.RECEIPT) }
                 TypeOption("回憶", Icons.Rounded.Image, current.type == PhotoType.MEMORY, Modifier.weight(1f)) { onType(i, PhotoType.MEMORY) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                ViewerAction(Icons.Rounded.DeleteOutline, "刪除") { onDelete(i) }
+                if (editable) ViewerAction(Icons.Rounded.DeleteOutline, "刪除") { onDelete(i) }
                 ViewerAction(if (i in saved) Icons.Rounded.CheckCircle else Icons.Rounded.Download, if (i in saved) "已存相簿" else "存到相簿") {
                     onSave(i); saved = saved + i
                 }

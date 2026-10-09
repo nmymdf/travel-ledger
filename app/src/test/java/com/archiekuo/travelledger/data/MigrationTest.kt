@@ -35,7 +35,7 @@ class MigrationTest {
             close()
         }
         // Validates each step's resulting schema against the exported schema files.
-        helper.runMigrationsAndValidate(name, 5, true, *AppDatabase.ALL_MIGRATIONS).close()
+        helper.runMigrationsAndValidate(name, 6, true, *AppDatabase.ALL_MIGRATIONS).close()
 
         val db = Room.databaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java, name)
             .addMigrations(*AppDatabase.ALL_MIGRATIONS).allowMainThreadQueries().build()
@@ -52,6 +52,8 @@ class MigrationTest {
             val trip = db.tripDao().observeTrip(1).first()!!
             assertNull(trip.coverPath)
             assertNull(trip.coverTheme)
+            assertEquals(32, trip.uuid.length) // every old trip gets its own identity for sharing
+            assertNull(trip.sharedBy)
             assertEquals(40000.0, trip.budget!!, 0.0)
             assertEquals(listOf("我"), db.tripDao().getMembers(1).map { it.name })
             assertEquals(0, db.planDao().observeRows(1).first().size)
@@ -65,5 +67,18 @@ class MigrationTest {
         helper.runMigrationsAndValidate(name, 3, true, AppDatabase.MIGRATION_2_3).close()
         helper.runMigrationsAndValidate(name, 4, true, AppDatabase.MIGRATION_3_4).close()
         helper.runMigrationsAndValidate(name, 5, true, AppDatabase.MIGRATION_4_5).close()
+        helper.runMigrationsAndValidate(name, 6, true, AppDatabase.MIGRATION_5_6).close()
+    }
+
+    @Test fun v6GivesEachTripADifferentUuid() {
+        helper.createDatabase(name, 5).apply {
+            execSQL("INSERT INTO trip (id, name, startDate, endDate, homeCurrency, budget, splitEnabled, createdAt, archived) VALUES (1, 'A', 0, 1, 'TWD', NULL, 0, 0, 0)")
+            execSQL("INSERT INTO trip (id, name, startDate, endDate, homeCurrency, budget, splitEnabled, createdAt, archived) VALUES (2, 'B', 0, 1, 'TWD', NULL, 0, 0, 0)")
+            close()
+        }
+        val db = helper.runMigrationsAndValidate(name, 6, true, AppDatabase.MIGRATION_5_6)
+        val ids = db.query("SELECT uuid FROM trip").use { c -> generateSequence { if (c.moveToNext()) c.getString(0) else null }.toList() }
+        db.close()
+        assertEquals(2, ids.toSet().size)
     }
 }

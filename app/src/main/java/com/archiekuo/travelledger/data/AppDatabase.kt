@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Trip::class, TripCurrencyRate::class, Member::class, Category::class,
         PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class, PlanItem::class,
     ],
-    version = 5,
+    version = 6,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
@@ -64,7 +64,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+        /** v6: trip identity for sharing, and who shared a read-only copy. */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE trip ADD COLUMN uuid TEXT NOT NULL DEFAULT ''")
+                db.execSQL("UPDATE trip SET uuid = lower(hex(randomblob(16))) WHERE uuid = ''")
+                db.execSQL("ALTER TABLE trip ADD COLUMN sharedBy TEXT")
+                db.execSQL("ALTER TABLE trip ADD COLUMN sharedAt INTEGER")
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
 
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "travel-ledger.db").setup().build()

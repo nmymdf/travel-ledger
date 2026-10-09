@@ -92,7 +92,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.onTrip(
             }
         }
     }
-    item { SectionHeader("今天的行程") { SmallAdd("新增") { actions.addPlan(t) } } }
+    item { SectionHeader("今天的行程") { if (!actions.readOnly) SmallAdd("新增") { actions.addPlan(t) } } }
     if (todays.isEmpty()) {
         item { Text("今天還沒有安排,可以從「行程」的待排清單排進來。", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     } else {
@@ -102,7 +102,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.onTrip(
     if (missed.isNotEmpty()) {
         item {
             SectionHeader("之前沒去的 · ${missed.size} 項") {
-                SmallAdd("全部移到今天", Icons.Rounded.Redo) { actions.movePlans(missed.map { it.id }, t) }
+                if (!actions.readOnly) SmallAdd("全部移到今天", Icons.Rounded.Redo) { actions.movePlans(missed.map { it.id }, t) }
             }
         }
         item { PlanCard(missed, trip, showDate = true, withActions = false, actions = actions) }
@@ -204,8 +204,8 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Segmented(listOf("依天", "依類型"), if (byType) 1 else 0, Modifier.weight(1f)) { byType = it == 1 }
-                IconButton({ pasting = true }) { Icon(Icons.Rounded.ContentPaste, "貼上多筆") }
-                Button(
+                if (!actions.readOnly) IconButton({ pasting = true }) { Icon(Icons.Rounded.ContentPaste, "貼上多筆") }
+                if (!actions.readOnly) Button(
                     { actions.addPlan(null) }, shape = RoundedCornerShape(50),
                     contentPadding = PaddingValues(horizontal = 14.dp), modifier = Modifier.height(40.dp),
                 ) {
@@ -220,6 +220,10 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
                 Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     IconTile(Icons.Rounded.Map, MaterialTheme.colorScheme.primary, size = 64.dp, corner = 20.dp)
                     Spacer(Modifier.height(12.dp))
+                    if (actions.readOnly) {
+                        Text("對方還沒有安排行程", style = MaterialTheme.typography.titleMedium)
+                        return@Column
+                    }
                     Text("把出發前做的功課放進來", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -263,7 +267,7 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
                     Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Day ${day - trip.startDate + 1}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                         Text("  ${fmtShortDate(day)}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        SmallAdd("加入") { actions.addPlan(day) }
+                        if (!actions.readOnly) SmallAdd("加入") { actions.addPlan(day) }
                     }
                 }
                 item(key = "c$day") {
@@ -348,7 +352,7 @@ private fun PlanRowItem(p: PlanRow, trip: Trip, showDate: Boolean, withActions: 
     ) {
         // Status: tap toggles done.
         Box(
-            Modifier.size(44.dp).clip(CircleShape).clickable {
+            Modifier.size(44.dp).clip(CircleShape).clickable(enabled = !actions.readOnly) {
                 actions.setPlanStatus(p.id, if (done) PlanStatus.TODO else PlanStatus.DONE)
             },
             contentAlignment = Alignment.Center,
@@ -399,7 +403,7 @@ private fun PlanRowItem(p: PlanRow, trip: Trip, showDate: Boolean, withActions: 
             if (p.location.isNotBlank()) {
                 IconButton({ actions.openMap(p) }) { Icon(Icons.Rounded.Directions, "導航", tint = MaterialTheme.colorScheme.primary) }
             }
-            IconButton({ actions.addExpense(p.id) }) { Icon(Icons.Rounded.AddCard, "記一筆", tint = MaterialTheme.colorScheme.primary) }
+            if (!actions.readOnly) IconButton({ actions.addExpense(p.id) }) { Icon(Icons.Rounded.AddCard, "記一筆", tint = MaterialTheme.colorScheme.primary) }
         }
     }
 }

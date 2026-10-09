@@ -14,15 +14,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.archiekuo.travelledger.logic.PlanParser
 import com.archiekuo.travelledger.ui.AppNav
+import com.archiekuo.travelledger.ui.ImportInbox
 import com.archiekuo.travelledger.ui.SharedPlaceInbox
 import com.archiekuo.travelledger.ui.AppPrefs
 import com.archiekuo.travelledger.ui.AppTheme
 import com.archiekuo.travelledger.ui.isDarkTheme
 
 class MainActivity : ComponentActivity() {
-    /** "分享 → 旅帳" from Google Maps or any app that shares text. */
+    /** "分享 → 旅帳" from Google Maps or any app that shares text; a 旅帳 file opened or shared from LINE. */
     private fun receiveShare(intent: Intent?) {
+        if (intent?.action == Intent.ACTION_VIEW) {
+            intent.data?.let { ImportInbox.pending = it }
+            return
+        }
         if (intent?.action != Intent.ACTION_SEND) return
+        @Suppress("DEPRECATION")
+        val stream = intent.getParcelableExtra<android.net.Uri>(Intent.EXTRA_STREAM)
+        if (stream != null && intent.type?.startsWith("text/") != true) {
+            ImportInbox.pending = stream
+            return
+        }
         val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
         SharedPlaceInbox.pending = PlanParser.parseShare(text, intent.getStringExtra(Intent.EXTRA_SUBJECT))
     }
