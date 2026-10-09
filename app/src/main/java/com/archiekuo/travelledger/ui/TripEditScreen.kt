@@ -104,7 +104,7 @@ fun TripEditScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(Modifier.fillMaxWidth().height(140.dp).clip(MaterialTheme.shapes.large).clickable(onClick = onPickCover)) {
-                TripCover(coverPath, name.ifBlank { "旅程" }, Modifier.matchParentSize(), iconSize = 120.dp)
+                TripCover(coverPath, name, Modifier.matchParentSize(), start)
                 if (coverBusy) {
                     Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.35f)), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color.White)

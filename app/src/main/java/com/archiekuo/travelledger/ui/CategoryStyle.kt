@@ -77,16 +77,5 @@ fun paymentIcon(name: String?): ImageVector = when {
     else -> Icons.Rounded.AccountBalanceWallet
 }
 
-/** Gradient pairs for trips without a cover photo, picked by name. */
-private val CoverGradients = listOf(
-    Color(0xFF5B57F2) to Color(0xFFC06CDB),
-    Color(0xFF1D4ED8) to Color(0xFF22D3EE),
-    Color(0xFFEC4899) to Color(0xFFFB923C),
-    Color(0xFF047857) to Color(0xFF84CC16),
-    Color(0xFF1E293B) to Color(0xFF6366F1),
-    Color(0xFFB45309) to Color(0xFFFBBF24),
-)
-
-fun coverGradient(seed: String): Pair<Color, Color> = CoverGradients[seed.hashCode().mod(CoverGradients.size)]
 
 fun avatarColor(name: String): Color = Palette[name.hashCode().mod(Palette.size - 1)]

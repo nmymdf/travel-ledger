@@ -27,7 +27,7 @@ await page.pdf({
   headerTemplate: "<span></span>",
   footerTemplate:
     '<div style="width:100%;font-size:8px;color:#8e91a2;padding:0 17mm;display:flex;justify-content:space-between;font-family:sans-serif">' +
-    '<span>旅帳 使用說明書 v0.5.2</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
+    '<span>旅帳 使用說明書 v0.6.0</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>',
 });
 await browser.close();
 console.log("wrote 旅帳使用說明書.pdf");

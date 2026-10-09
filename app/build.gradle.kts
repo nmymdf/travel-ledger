@@ -16,8 +16,8 @@ android {
         targetSdk = 35
         // Personal phone is 64-bit ARM; keeps the bundled OCR native libraries small.
         ndk { abiFilters += "arm64-v8a" }
-        versionCode = 7
-        versionName = "0.5.2"
+        versionCode = 8
+        versionName = "0.6.0"
     }
 
     buildTypes {

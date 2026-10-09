@@ -18,6 +18,11 @@ import com.archiekuo.travelledger.data.TripSummary
 import com.archiekuo.travelledger.logic.ReceiptGuess
 import com.archiekuo.travelledger.ui.*
 import org.junit.Rule
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import org.junit.Test
 import java.time.LocalDate
 
@@ -72,11 +77,11 @@ class ScreenSnapshots {
         paparazzi.snapshot("${name}_dark") { AppTheme(ThemeMode.DARK, content = content) }
     }
 
-    @Test fun home() = both("home") { TripListScreen(trips, {}, {}, {}, today, "0.5.2") }
+    @Test fun home() = both("home") { TripListScreen(trips, {}, {}, {}, today, "0.6.0") }
 
     /** Large system font + extra-large app font, dark: the header must not cut the signature. */
     @Test fun homeXLDark() = paparazzi.snapshot {
-        AppTheme(ThemeMode.DARK, FontSize.XLARGE) { TripListScreen(trips.take(1), {}, {}, {}, today, "0.5.2") }
+        AppTheme(ThemeMode.DARK, FontSize.XLARGE) { TripListScreen(trips.take(1), {}, {}, {}, today, "0.6.0") }
     }
 
     private fun trip(tab: TripTab, day: LocalDate = today) = @Composable {
@@ -129,6 +134,23 @@ class ScreenSnapshots {
                 listOf(PhotoItem(1, "/a.jpg", PhotoType.RECEIPT), PhotoItem(2, "/b.jpg", PhotoType.MEMORY)),
                 listOf(TitleSuggestion("一蘭拉麵 本店", 1, 0)), listOf("TWD", "JPY"), null, false, ExpenseActions(),
             )
+        }
+    }
+
+    /** One card per scene so the illustrations can be reviewed side by side. */
+    @Test fun coverGallery() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) {
+            androidx.compose.foundation.layout.Column(
+                androidx.compose.ui.Modifier.padding(12.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+            ) {
+                listOf(
+                    "韓國賞楓" to d(10, 22), "東京美食之旅" to d(6, 10), "沖繩夏日跳島" to d(7, 20), "京都賞櫻" to d(4, 1),
+                    "北海道滑雪" to d(1, 10), "大阪親子遊" to d(12, 20), "跟阿嬤出去玩" to d(6, 1),
+                ).forEach { (n, day) ->
+                    TripCover(null, n, androidx.compose.ui.Modifier.fillMaxWidth().height(104.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)), day)
+                }
+            }
         }
     }
 

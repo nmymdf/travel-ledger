@@ -194,21 +194,17 @@ fun Avatar(name: String, size: Dp = 32.dp) {
     }
 }
 
-/** Trip cover: the photo if any, otherwise a gradient picked by the trip name. */
+/** Trip cover: the photo if any, otherwise an illustration picked from the trip name. */
 @Composable
-fun TripCover(path: String?, seed: String, modifier: Modifier = Modifier, iconSize: Dp = 96.dp) {
+fun TripCover(path: String?, seed: String, modifier: Modifier = Modifier, startDate: Long? = null) {
     val image by rememberLocalImage(path)
     Box(modifier.clipToBounds()) {
         val img = image
         if (img != null) {
             Image(img, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
         } else {
-            val (a, b) = coverGradient(seed)
-            Box(Modifier.matchParentSize().background(Brush.linearGradient(listOf(a, b))))
-            Icon(
-                Icons.Rounded.Luggage, null, tint = Color.White.copy(alpha = 0.22f),
-                modifier = Modifier.align(Alignment.BottomEnd).offset(x = iconSize * 0.18f, y = iconSize * 0.12f).size(iconSize),
-            )
+            // No photo chosen: an illustration matching the trip name and season.
+            CoverArtwork(seed, startDate, Modifier.matchParentSize())
         }
     }
 }

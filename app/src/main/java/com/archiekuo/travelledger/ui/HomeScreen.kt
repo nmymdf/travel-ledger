@@ -170,7 +170,7 @@ private fun TripMeta(t: TripSummary) {
 private fun FeaturedTripCard(t: TripSummary, today: LocalDate, onClick: () -> Unit) {
     LedgerCard(Modifier.fillMaxWidth(), onClick = onClick, padding = PaddingValues(0.dp)) {
         Box(Modifier.fillMaxWidth().height(150.dp)) {
-            TripCover(t.coverPath, t.name, Modifier.matchParentSize(), iconSize = 130.dp)
+            TripCover(t.coverPath, t.name, Modifier.matchParentSize(), t.startDate)
             CoverBadge(tripStatus(t.startDate, t.endDate, today), Modifier.align(Alignment.TopStart).padding(12.dp))
         }
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -205,7 +205,7 @@ private fun FeaturedTripCard(t: TripSummary, today: LocalDate, onClick: () -> Un
 private fun CompactTripCard(t: TripSummary, today: LocalDate, onClick: () -> Unit) {
     LedgerCard(Modifier.fillMaxWidth(), onClick = onClick, padding = PaddingValues(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TripCover(t.coverPath, t.name, Modifier.size(72.dp).clip(RoundedCornerShape(14.dp)), iconSize = 56.dp)
+            TripCover(t.coverPath, t.name, Modifier.size(72.dp).clip(RoundedCornerShape(14.dp)), t.startDate)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(t.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
