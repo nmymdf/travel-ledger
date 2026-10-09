@@ -30,4 +30,12 @@ class CoverArtTest {
         assertEquals(listOf(Landmark.EIFFEL), CoverArt.pick("巴黎蜜月", d(6)).landmarks)
         assertEquals(listOf(Landmark.TAIPEI_101), CoverArt.pick("台北跨年", d(12)).landmarks)
     }
+
+    @Test fun aHandPickedSceneWins() {
+        assertEquals(CoverSpec(CoverTheme.SNOW, listOf(Landmark.SEOUL_TOWER)), CoverArt.pick("韓國賞楓", d(10), CoverTheme.SNOW))
+        assertEquals(CoverTheme.BEACH, CoverArt.pick("越南峴港", d(11), CoverTheme.BEACH).theme)
+        assertEquals(CoverTheme.GENERIC, CoverArt.pick("越南峴港", d(11)).theme)
+        assertEquals(CoverTheme.AUTUMN, CoverTheme.of("AUTUMN"))
+        assertEquals(null, CoverTheme.of(null))
+    }
 }

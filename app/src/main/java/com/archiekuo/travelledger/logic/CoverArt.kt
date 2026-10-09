@@ -3,7 +3,13 @@ package com.archiekuo.travelledger.logic
 import java.time.LocalDate
 
 /** Illustrated cover scenes. */
-enum class CoverTheme { AUTUMN, SAKURA, SNOW, BEACH, FOOD, CITY, GENERIC }
+enum class CoverTheme(val label: String) {
+    AUTUMN("秋楓"), SAKURA("櫻花"), SNOW("雪景"), BEACH("海島"), FOOD("美食"), CITY("城市"), GENERIC("旅行");
+
+    companion object {
+        fun of(name: String?): CoverTheme? = entries.firstOrNull { it.name == name }
+    }
+}
 
 /** Landmark silhouettes drawn into the scene. */
 enum class Landmark { SEOUL_TOWER, TOKYO_TOWER, FUJI, OSAKA_CASTLE, PAGODA, TORII, TAIPEI_101, BANGKOK_TEMPLE, MARINA_BAY, EIFFEL, BIG_BEN, CITY_SKYLINE }
@@ -40,10 +46,11 @@ object CoverArt {
     private val coldPlaces = listOf("北海道", "札幌", "小樽", "函館", "富良野", "東北", "仙台", "首爾", "韓國", "南韓", "巴黎", "法國", "倫敦", "英國", "歐洲", "瑞士", "冰島", "芬蘭")
     private val beachPlaces = places[1].first
 
-    fun pick(name: String, start: LocalDate?): CoverSpec {
+    /** [chosen] is a theme the user picked by hand; it wins over everything the name suggests. */
+    fun pick(name: String, start: LocalDate?, chosen: CoverTheme? = null): CoverSpec {
         val landmarks = places.firstOrNull { (words, _) -> words.any { it in name } }?.second ?: emptyList()
         val keyword = themeWords.firstOrNull { (_, words) -> words.any { it in name } }?.first
-        val theme = keyword ?: when {
+        val theme = chosen ?: keyword ?: when {
             beachPlaces.any { it in name } -> CoverTheme.BEACH
             start != null && start.monthValue in 3..4 && landmarks.isNotEmpty() -> CoverTheme.SAKURA
             start != null && start.monthValue in 10..11 && landmarks.isNotEmpty() -> CoverTheme.AUTUMN

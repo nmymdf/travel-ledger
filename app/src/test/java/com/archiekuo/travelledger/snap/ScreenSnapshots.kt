@@ -34,9 +34,9 @@ class ScreenSnapshots {
     private fun d(m: Int, day: Int) = LocalDate.of(2024, m, day).toEpochDay()
 
     private val trips = listOf(
-        TripSummary(1, "東京美食之旅", d(6, 10), d(6, 15), 40000.0, null, 28450.0, 4, "JPY"),
-        TripSummary(2, "沖繩夏日跳島", d(7, 20), d(7, 24), 30000.0, null, 6200.0, 2, "JPY"),
-        TripSummary(3, "大阪親子遊", LocalDate.of(2023, 12, 20).toEpochDay(), LocalDate.of(2023, 12, 26).toEpochDay(), null, null, 52300.0, 4, "JPY"),
+        TripSummary(1, "東京美食之旅", d(6, 10), d(6, 15), 40000.0, null, null, 28450.0, 4, "JPY"),
+        TripSummary(2, "沖繩夏日跳島", d(7, 20), d(7, 24), 30000.0, null, null, 6200.0, 2, "JPY"),
+        TripSummary(3, "大阪親子遊", LocalDate.of(2023, 12, 20).toEpochDay(), LocalDate.of(2023, 12, 26).toEpochDay(), null, null, null, 52300.0, 4, "JPY"),
     )
     private val trip = Trip(1, "東京美食之旅", d(6, 10), d(6, 15), budget = 40000.0, splitEnabled = true)
     private val categories = listOf("吃", "交通", "購物", "住宿", "景點", "飲料", "其他").mapIndexed { i, n -> Category(i + 1L, n, i) }
@@ -77,11 +77,11 @@ class ScreenSnapshots {
         paparazzi.snapshot("${name}_dark") { AppTheme(ThemeMode.DARK, content = content) }
     }
 
-    @Test fun home() = both("home") { TripListScreen(trips, {}, {}, {}, today, "0.6.0") }
+    @Test fun home() = both("home") { TripListScreen(trips, {}, {}, {}, today, "0.6.1") }
 
     /** Large system font + extra-large app font, dark: the header must not cut the signature. */
     @Test fun homeXLDark() = paparazzi.snapshot {
-        AppTheme(ThemeMode.DARK, FontSize.XLARGE) { TripListScreen(trips.take(1), {}, {}, {}, today, "0.6.0") }
+        AppTheme(ThemeMode.DARK, FontSize.XLARGE) { TripListScreen(trips.take(1), {}, {}, {}, today, "0.6.1") }
     }
 
     private fun trip(tab: TripTab, day: LocalDate = today) = @Composable {
@@ -106,7 +106,7 @@ class ScreenSnapshots {
     @Test fun tripEdit() = both("tripEdit") {
         TripEditScreen(
             trip, listOf("我", "小美", "小華", "阿姨"), rates, null, false,
-            {}, {}, { _, _, _ -> }, today,
+            {}, {}, {}, { _, _, _ -> }, today,
         )
     }
 

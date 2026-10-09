@@ -35,7 +35,7 @@ class MigrationTest {
             close()
         }
         // Validates each step's resulting schema against the exported schema files.
-        helper.runMigrationsAndValidate(name, 4, true, *AppDatabase.ALL_MIGRATIONS).close()
+        helper.runMigrationsAndValidate(name, 5, true, *AppDatabase.ALL_MIGRATIONS).close()
 
         val db = Room.databaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java, name)
             .addMigrations(*AppDatabase.ALL_MIGRATIONS).allowMainThreadQueries().build()
@@ -51,6 +51,7 @@ class MigrationTest {
             assertEquals(Triple("吃", "", -1), Triple(cat.name, cat.icon, cat.color))
             val trip = db.tripDao().observeTrip(1).first()!!
             assertNull(trip.coverPath)
+            assertNull(trip.coverTheme)
             assertEquals(40000.0, trip.budget!!, 0.0)
             assertEquals(listOf("我"), db.tripDao().getMembers(1).map { it.name })
             assertEquals(0, db.planDao().observeRows(1).first().size)
@@ -63,5 +64,6 @@ class MigrationTest {
         helper.runMigrationsAndValidate(name, 2, true, AppDatabase.MIGRATION_1_2).close()
         helper.runMigrationsAndValidate(name, 3, true, AppDatabase.MIGRATION_2_3).close()
         helper.runMigrationsAndValidate(name, 4, true, AppDatabase.MIGRATION_3_4).close()
+        helper.runMigrationsAndValidate(name, 5, true, AppDatabase.MIGRATION_4_5).close()
     }
 }

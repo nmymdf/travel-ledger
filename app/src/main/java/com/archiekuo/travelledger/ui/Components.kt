@@ -196,7 +196,7 @@ fun Avatar(name: String, size: Dp = 32.dp) {
 
 /** Trip cover: the photo if any, otherwise an illustration picked from the trip name. */
 @Composable
-fun TripCover(path: String?, seed: String, modifier: Modifier = Modifier, startDate: Long? = null) {
+fun TripCover(path: String?, seed: String, modifier: Modifier = Modifier, startDate: Long? = null, theme: String? = null) {
     val image by rememberLocalImage(path)
     Box(modifier.clipToBounds()) {
         val img = image
@@ -204,7 +204,7 @@ fun TripCover(path: String?, seed: String, modifier: Modifier = Modifier, startD
             Image(img, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop)
         } else {
             // No photo chosen: an illustration matching the trip name and season.
-            CoverArtwork(seed, startDate, Modifier.matchParentSize())
+            CoverArtwork(seed, startDate, theme, Modifier.matchParentSize())
         }
     }
 }

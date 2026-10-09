@@ -23,6 +23,8 @@ data class Trip(
     val archived: Boolean = false,
     /** Absolute path of the cover image in app-private storage, or null for a generated cover. */
     val coverPath: String? = null,
+    /** Illustration chosen by hand (CoverTheme name), or null to pick it from the trip name. */
+    val coverTheme: String? = null,
 )
 
 @Entity(

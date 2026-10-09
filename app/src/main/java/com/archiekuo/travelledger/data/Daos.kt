@@ -15,6 +15,7 @@ data class TripSummary(
     val endDate: Long,
     val budget: Double?,
     val coverPath: String?,
+    val coverTheme: String?,
     val totalHome: Double,
     val memberCount: Int,
     /** Comma-separated foreign currencies used in this trip, or null. */
@@ -24,7 +25,7 @@ data class TripSummary(
 @Dao
 interface TripDao {
     @Query(
-        """SELECT t.id, t.name, t.startDate, t.endDate, t.budget, t.coverPath,
+        """SELECT t.id, t.name, t.startDate, t.endDate, t.budget, t.coverPath, t.coverTheme,
                   COALESCE((SELECT SUM(homeAmount) FROM expense WHERE tripId = t.id), 0) AS totalHome,
                   (SELECT COUNT(*) FROM member WHERE tripId = t.id) AS memberCount,
                   (SELECT GROUP_CONCAT(currency) FROM

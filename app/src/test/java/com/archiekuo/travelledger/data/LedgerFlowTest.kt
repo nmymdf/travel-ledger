@@ -309,7 +309,7 @@ class LedgerFlowTest {
         val before = runBlocking { db.tripDao().getMembers(trip) }.associate { it.name to it.id }
         val t = runBlocking { db.tripDao().observeTrip(trip).first() }!!
         TripDetailViewModel(db, trip).update(
-            t.copy(name = "東京吃吃喝喝", budget = 50000.0), listOf("我", "小美", "阿姨", "表哥"),
+            t.copy(name = "東京吃吃喝喝", budget = 50000.0, coverTheme = "SAKURA"), listOf("我", "小美", "阿姨", "表哥"),
             listOf(TripCurrencyRate(trip, "JPY", 0.205), TripCurrencyRate(trip, "USD", 32.4)),
         )
         val after = runBlocking { db.tripDao().getMembers(trip) }.associate { it.name to it.id }
@@ -317,6 +317,7 @@ class LedgerFlowTest {
         listOf("我", "小美", "阿姨").forEach { assertEquals("$it keeps its id", before[it], after[it]) }
         assertEquals(listOf("JPY" to 0.205, "USD" to 32.4), runBlocking { db.expenseDao().getRates(trip) }.map { it.currency to it.rate })
         assertEquals("東京吃吃喝喝", runBlocking { db.tripDao().observeTrip(trip).first() }!!.name)
+        assertEquals("SAKURA", runBlocking { db.tripDao().observeSummaries().first() }.single().coverTheme)
     }
 
     @Test fun deletingATripRemovesEverythingInIt() {

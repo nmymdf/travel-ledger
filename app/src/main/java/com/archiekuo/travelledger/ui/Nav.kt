@@ -287,6 +287,10 @@ private fun TripEditRoute(
     TripEditScreen(
         initial, initialMembers, initialRates, cover, busy,
         onPickCover = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+        onRemoveCover = {
+            if (cover != initial?.coverPath) CoverStore.delete(cover) // an unsaved pick; a saved one goes on save
+            cover = null
+        },
         onBack = {
             if (cover != initial?.coverPath) CoverStore.delete(cover)
             onBack()

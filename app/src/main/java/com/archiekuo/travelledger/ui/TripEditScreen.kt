@@ -66,6 +66,7 @@ fun TripEditScreen(
     coverPath: String?,
     coverBusy: Boolean,
     onPickCover: () -> Unit,
+    onRemoveCover: () -> Unit,
     onBack: () -> Unit,
     onSave: (Trip, List<String>, List<TripCurrencyRate>) -> Unit,
     today: LocalDate = LocalDate.now(),
@@ -73,6 +74,7 @@ fun TripEditScreen(
     var name by rememberSaveable { mutableStateOf(initial?.name ?: "") }
     var budget by rememberSaveable { mutableStateOf(initial?.budget?.let { fmtNumber(it) } ?: "") }
     var split by rememberSaveable { mutableStateOf(initial?.splitEnabled ?: false) }
+    var theme by rememberSaveable { mutableStateOf(initial?.coverTheme) }
     val members = remember { mutableStateListOf<String>().apply { addAll(initialMembers) } }
     val rates = remember { mutableStateListOf<Pair<String, String>>().apply { addAll(initialRates.map { it.currency to fmtNumber(it.rate) }) } }
     var start by rememberSaveable { mutableStateOf(initial?.startDate ?: today.toEpochDay()) }
@@ -84,7 +86,7 @@ fun TripEditScreen(
     fun save() {
         val trip = (initial ?: Trip(name = "", startDate = 0, endDate = 0)).copy(
             name = name.trim(), startDate = start, endDate = end,
-            budget = budget.toDoubleOrNull()?.takeIf { it > 0 }, splitEnabled = split, coverPath = coverPath,
+            budget = budget.toDoubleOrNull()?.takeIf { it > 0 }, splitEnabled = split, coverPath = coverPath, coverTheme = theme,
         )
         val r = rates.mapNotNull { (c, v) -> v.toDoubleOrNull()?.takeIf { it > 0 }?.let { TripCurrencyRate(trip.id, c, it) } }
         onSave(trip, members.toList(), r)
@@ -104,7 +106,7 @@ fun TripEditScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(Modifier.fillMaxWidth().height(140.dp).clip(MaterialTheme.shapes.large).clickable(onClick = onPickCover)) {
-                TripCover(coverPath, name, Modifier.matchParentSize(), start)
+                TripCover(coverPath, name, Modifier.matchParentSize(), start, theme)
                 if (coverBusy) {
                     Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.35f)), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(color = Color.White)
@@ -118,6 +120,16 @@ fun TripEditScreen(
                     Icon(Icons.Rounded.PhotoLibrary, null, tint = Color.White, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(if (coverPath == null) "從相簿選封面" else "更換封面", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+
+            if (coverPath == null) {
+                CoverThemePicker(name, start, theme) { theme = it }
+            } else {
+                TextButton(onRemoveCover, Modifier.padding(top = 0.dp)) {
+                    Icon(Icons.Rounded.Brush, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("不用照片,改用插畫")
                 }
             }
 
@@ -290,4 +302,39 @@ fun TextInputDialog(
         confirmButton = { TextButton({ onConfirm(text.trim()) }, enabled = text.isNotBlank()) { Text("確定") } },
         dismissButton = { TextButton(onDismiss) { Text("取消") } },
     )
+}
+
+/** "自動" plus one small preview per scene; tapping one fixes the illustration for this trip. */
+@Composable
+private fun CoverThemePicker(name: String, start: Long, selected: String?, onSelect: (String?) -> Unit) {
+    val date = LocalDate.ofEpochDay(start)
+    val options = listOf<com.archiekuo.travelledger.logic.CoverTheme?>(null) + com.archiekuo.travelledger.logic.CoverTheme.entries
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("封面插畫", style = MaterialTheme.typography.titleSmall)
+        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            items(options.size) { i ->
+                val t = options[i]
+                val on = t?.name == selected
+                val shape = RoundedCornerShape(12.dp)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onSelect(t?.name) }) {
+                    Box(
+                        Modifier.size(76.dp, 48.dp).clip(shape)
+                            .border(if (on) 2.5.dp else 1.dp, if (on) MaterialTheme.colorScheme.primary else ledger.hairline, shape),
+                    ) {
+                        CoverArtwork(com.archiekuo.travelledger.logic.CoverArt.pick(name, date, t), Modifier.matchParentSize())
+                        if (t == null) {
+                            Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.25f)), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        t?.label ?: "自動", style = MaterialTheme.typography.labelMedium,
+                        color = if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
 }

@@ -284,7 +284,9 @@ fun CoverArtwork(spec: CoverSpec, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun CoverArtwork(name: String, startDate: Long?, modifier: Modifier = Modifier) {
-    val spec = remember(name, startDate) { CoverArt.pick(name, startDate?.let { LocalDate.ofEpochDay(it) }) }
+fun CoverArtwork(name: String, startDate: Long?, theme: String? = null, modifier: Modifier = Modifier) {
+    val spec = remember(name, startDate, theme) {
+        CoverArt.pick(name, startDate?.let { LocalDate.ofEpochDay(it) }, CoverTheme.of(theme))
+    }
     CoverArtwork(spec, modifier)
 }

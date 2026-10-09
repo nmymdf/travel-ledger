@@ -82,7 +82,7 @@ fun TripScreen(
                     Modifier.weight(1f).clip(RoundedCornerShape(14.dp)).clickable(onClick = actions.switchTrip).padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (trip != null) TripCover(trip.coverPath, trip.name, Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)), trip.startDate)
+                    if (trip != null) TripCover(trip.coverPath, trip.name, Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)), trip.startDate, trip.coverTheme)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f, fill = false)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
