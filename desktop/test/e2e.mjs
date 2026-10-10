@@ -104,6 +104,51 @@ await page.locator(".brand").click(); // blur saves
 await col("Day 3").locator(".daynote", { hasText: "搭 JR 到京都" }).waitFor();
 await shot("04-board");
 
+// ── Undo / redo: every change is one step, Ctrl+Z / Ctrl+Y outside fields, or the buttons. ──
+const usjCard = (label) => col(label).locator(".card", { hasText: "環球影城" });
+const press = async (keys) => { await page.locator(".brand").click(); await page.keyboard.press(keys); };
+await usjCard("Day 1").dragTo(col("Day 3"));
+await usjCard("Day 3").waitFor();
+await press("Control+z");
+await usjCard("Day 1").waitFor();
+await press("Control+y");
+await usjCard("Day 3").waitFor();
+await page.getByRole("button", { name: "↶ 復原" }).click();
+await usjCard("Day 1").waitFor();
+assert.equal(await page.getByRole("button", { name: "↷ 重做" }).isEnabled(), true);
+// Typing a name is one step, however many keys.
+await usjCard("Day 1").click();
+await page.locator("#ed-title").click();
+await page.keyboard.press("End");
+await page.locator("#ed-title").pressSequentially(" 快速通關");
+await page.locator("#ed-close").click();
+await col("Day 1").locator(".card", { hasText: "環球影城 快速通關" }).waitFor();
+await press("Control+z");
+await col("Day 1").locator(".card .title", { hasText: /^環球影城$/ }).waitFor();
+// Ctrl+Z inside a field stays the browser's own typing undo.
+await usjCard("Day 1").click();
+await page.locator("#ed-title").click();
+await page.keyboard.press("End");
+await page.keyboard.type("X");
+await page.keyboard.press("Control+z");
+assert.equal(await page.locator("#ed-title").inputValue(), "環球影城");
+await page.locator("#ed-close").click();
+// Delete asks nothing; the toast brings it back, pictures included.
+await usjCard("Day 1").click();
+await page.locator("#ed-delete").click();
+await usjCard("Day 1").waitFor({ state: "detached" });
+await shot("04b-undo-toast");
+await page.locator(".toast-action", { hasText: "復原" }).click();
+await usjCard("Day 1").click();
+assert.equal(await page.locator("#drawer .pic img").count(), 1);
+await page.locator("#ed-close").click();
+// Deleting the whole trip can be undone too, and the undo is saved.
+await page.getByRole("button", { name: "旅程設定" }).click();
+await page.locator("#tr-delete").click();
+await page.locator(".empty-state").waitFor();
+await press("Control+z");
+await usjCard("Day 1").waitFor();
+
 // Survives a reload (kept in this browser).
 await page.waitForTimeout(400);
 await page.reload();
