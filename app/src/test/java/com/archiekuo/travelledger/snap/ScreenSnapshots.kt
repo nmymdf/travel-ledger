@@ -168,7 +168,7 @@ class ScreenSnapshots {
     private val shared = trip.copy(sharedBy = "小明", sharedAt = java.time.LocalDateTime.of(2024, 6, 12, 21, 5).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
 
     @Test fun sharedLedger() = both("sharedLedger") {
-        TripScreen(shared, 4, expenses, plans, TripTab.LEDGER, {}, TripActions(readOnly = true), today)
+        TripScreen(shared, 4, expenses, plans, TripTab.LEDGER, {}, TripActions(readOnly = true, pendingCount = 2), today)
     }
     @Test fun sharedPlan() = paparazzi.snapshot {
         AppTheme(ThemeMode.LIGHT) { TripScreen(shared, 4, expenses, plans, TripTab.PLAN, {}, TripActions(readOnly = true), today) }
@@ -199,5 +199,53 @@ class ScreenSnapshots {
     }
     @Test fun homeWithShared() = paparazzi.snapshot {
         AppTheme(ThemeMode.LIGHT) { TripListScreen(trips.take(1) + trips[1].copy(sharedBy = "阿姨") , {}, {}, {}, today, "0.7.0") }
+    }
+
+    // ── Largest text: system font enlarged + 特大 (what the author's own phone looks like) ──
+    private fun huge(content: @Composable () -> Unit) {
+        paparazzi.unsafeUpdateConfig(deviceConfig = DeviceConfig.PIXEL_5.copy(fontScale = 1.3f))
+        paparazzi.snapshot { AppTheme(ThemeMode.DARK, FontSize.XLARGE, content = content) }
+    }
+    @Test fun homeHuge() = huge {
+        TripListScreen(
+            listOf(
+                TripSummary(1, "韓國賞楓", d(10, 22), d(10, 27), null, null, "AUTUMN", 100.0, 2, "KRW"),
+                TripSummary(2, "2026首爾賞楓五天四夜", d(10, 22), d(10, 27), null, null, null, 6498.0, 4, "KRW"),
+            ),
+            {}, {}, {}, LocalDate.of(2024, 10, 10), "0.8.0",
+        )
+    }
+    @Test fun planEditHuge() = huge {
+        PlanEditScreen(
+            PlanItem(4, 1, "第三天行程", cat("吃"), d(6, 12), null, PlanStatus.TODO, Reservation.NONE, "", "", null, ""),
+            trip, categories, false, PlanActions(),
+        )
+    }
+
+    @Test fun reviewAdditions() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) {
+            ReviewAdditionsDialog(
+                com.archiekuo.travelledger.backup.TripArchive.Additions(
+                    "u", "東京美食之旅", "小美",
+                    listOf(
+                        com.archiekuo.travelledger.backup.TripArchive.AdditionItem("a", false, "築地 壽司大", "行程 · 6/13 · 吃"),
+                        com.archiekuo.travelledger.backup.TripArchive.AdditionItem("b", true, "抹茶冰", "6/12 · JPY 900 · 吃"),
+                        com.archiekuo.travelledger.backup.TripArchive.AdditionItem("c", true, "唐吉訶德 伴手禮", "6/12 · JPY 5,980 · 購物"),
+                    ),
+                ),
+                false, {}, {},
+            )
+        }
+    }
+    @Test fun sendAdditions() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) { SendAdditionsDialog(shared, 2, "小美", false, {}) { _, _ -> } }
+    }
+    @Test fun homeReminder() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) { TripListScreen(trips.drop(2), {}, {}, {}, today, "0.8.0", reminder = trips[2]) }
+    }
+    @Test fun ledgerLinks() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) {
+            ExpenseDetailScreen(editState.copy(note = "訂位 https://tabelog.com/tokyo 電話 03-1234-5678"), categories, methods, emptyList(), {}, {})
+        }
     }
 }

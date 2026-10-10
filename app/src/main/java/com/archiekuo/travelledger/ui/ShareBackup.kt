@@ -4,9 +4,16 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -49,6 +56,15 @@ object ArchiveFiles {
         file.outputStream().use { TripArchive.export(db, it, kind, tripIds, photos, sharedBy, BuildConfig.VERSION_NAME) }
         FileProvider.getUriForFile(context, "${context.packageName}.files", file)
     }
+
+    /** My additions to a shared trip, as a file for its organizer. */
+    suspend fun exportAdditions(context: Context, db: AppDatabase, trip: com.archiekuo.travelledger.data.Trip, from: String, photos: Boolean): Uri =
+        withContext(Dispatchers.IO) {
+            val dir = File(context.cacheDir, "share").apply { deleteRecursively(); mkdirs() }
+            val file = File(dir, "卡溜趴補充-${safe(trip.name)}-${safe(from)}.zip")
+            file.outputStream().use { TripArchive.exportAdditions(db, it, trip.id, from, photos, BuildConfig.VERSION_NAME) }
+            FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+        }
 
     suspend fun exportTo(context: Context, db: AppDatabase, target: Uri, tripIds: List<Long>, photos: Boolean) = withContext(Dispatchers.IO) {
         context.contentResolver.openOutputStream(target, "wt")!!.use {
@@ -108,6 +124,114 @@ fun ShareTripDialog(tripName: String, myName: String, busy: Boolean, onDismiss: 
     )
 }
 
+/** "傳給記帳人": my additions on a shared trip go to its organizer for review. */
+@Composable
+fun SendAdditionsDialog(
+    trip: com.archiekuo.travelledger.data.Trip, count: Int, myName: String, busy: Boolean,
+    onDismiss: () -> Unit, onSend: (name: String, photos: Boolean) -> Unit,
+) {
+    var name by remember { mutableStateOf(myName) }
+    var photos by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Rounded.Send, null) },
+        title = { Text("傳給記帳人") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    "把你在「${trip.name}」補充的 $count 項做成一個檔案,傳給${trip.sharedBy}(例如 LINE)。${trip.sharedBy}確認加入後再分享一次,大家的就會統一。",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    name, { name = it.take(20) }, Modifier.fillMaxWidth(),
+                    label = { Text("你的名字") }, singleLine = true, shape = MaterialTheme.shapes.medium,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                )
+                CheckRow("包含照片", "收據照片也一起傳", photos) { photos = it }
+            }
+        },
+        confirmButton = {
+            TextButton({ onSend(name.trim(), photos) }, enabled = name.isNotBlank() && !busy) {
+                if (busy) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp) else Text("傳送")
+            }
+        },
+        dismissButton = { TextButton(onDismiss, enabled = !busy) { Text("取消") } },
+    )
+}
+
+/** The organizer looks through a companion's additions and ticks what goes into the book. */
+@Composable
+fun ReviewAdditionsDialog(additions: TripArchive.Additions, busy: Boolean, onDismiss: () -> Unit, onAccept: (Set<String>) -> Unit) {
+    var chosen by remember(additions) { mutableStateOf(additions.items.map { it.uuid }.toSet()) }
+    AlertDialog(
+        onDismissRequest = { if (!busy) onDismiss() },
+        icon = { Icon(Icons.Rounded.PlaylistAdd, null) },
+        title = { Text("${additions.from} 的補充") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "要加入「${additions.tripName}」的項目打勾。加入後記得再分享一次給大家。",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                additions.items.forEach { item ->
+                    val on = item.uuid in chosen
+                    Row(
+                        Modifier.fillMaxWidth().clickable { chosen = if (on) chosen - item.uuid else chosen + item.uuid },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(on, { chosen = if (on) chosen - item.uuid else chosen + item.uuid })
+                        Column(Modifier.weight(1f)) {
+                            Text(item.title, style = MaterialTheme.typography.bodyLarge)
+                            Text(item.detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = { TextButton({ onAccept(chosen) }, enabled = chosen.isNotEmpty() && !busy) { Text("加入 ${chosen.size} 項") } },
+        dismissButton = { TextButton(onDismiss, enabled = !busy) { Text("略過全部") } },
+    )
+}
+
+/** The whole backup: the dialog, then either the system "save as" screen or the share sheet. */
+@Composable
+fun BackupFlow(db: AppDatabase, onClose: () -> Unit, onBackedUp: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var photos by remember { mutableStateOf(true) }
+    fun done(ok: Boolean, message: String? = null) {
+        busy = false
+        if (ok) onBackedUp()
+        (if (ok) message else "備份失敗")?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show() }
+        onClose()
+    }
+    val saveTo = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { target ->
+        if (target == null) { busy = false; return@rememberLauncherForActivityResult }
+        scope.launch {
+            val ok = runCatching { ArchiveFiles.exportTo(context, db, target, db.tripDao().allIds(), photos) }.isSuccess
+            withContext(Dispatchers.Main) { done(ok, "已備份") }
+        }
+    }
+    BackupDialog(
+        busy, onDismiss = onClose,
+        onSave = { p -> photos = p; busy = true; saveTo.launch(ArchiveFiles.backupName()) },
+        onSend = { p ->
+            busy = true
+            scope.launch {
+                val result = runCatching {
+                    ArchiveFiles.exportForShare(context, db, ArchiveFiles.backupName(), TripArchive.KIND_BACKUP, db.tripDao().allIds(), p, null)
+                }
+                withContext(Dispatchers.Main) {
+                    result.onSuccess { uri -> ArchiveFiles.send(context, uri, "卡溜趴備份", "卡溜趴備份檔") }
+                    done(result.isSuccess)
+                }
+            }
+        },
+    )
+}
+
 /** "備份全部資料": with or without photos, to a file on the phone or through another app. */
 @Composable
 fun BackupDialog(busy: Boolean, onDismiss: () -> Unit, onSave: (photos: Boolean) -> Unit, onSend: (photos: Boolean) -> Unit) {
@@ -149,7 +273,11 @@ private fun CheckRow(title: String, subtitle: String, checked: Boolean, onChange
 
 /** What an incoming file will do, before anything is written. */
 @Composable
-fun ImportConfirmDialog(summary: TripArchive.Summary, existing: Set<String>, busy: Boolean, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+fun ImportConfirmDialog(
+    summary: TripArchive.Summary, existing: Set<String>, busy: Boolean, onDismiss: () -> Unit, onConfirm: () -> Unit,
+    /** Trips on this phone holding more recent records than the backup; restoring would lose them. */
+    newerHere: List<String> = emptyList(),
+) {
     val shared = summary.kind == TripArchive.KIND_TRIP
     val when_ = Instant.ofEpochMilli(summary.exportedAt).atZone(ZoneId.systemDefault()).toLocalDateTime()
     val stamp = "%d/%d %02d:%02d".format(when_.monthValue, when_.dayOfMonth, when_.hour, when_.minute)
@@ -184,11 +312,23 @@ fun ImportConfirmDialog(summary: TripArchive.Summary, existing: Set<String>, bus
                     },
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (newerHere.isNotEmpty()) {
+                    Row(
+                        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.errorContainer).padding(10.dp),
+                    ) {
+                        Icon(Icons.Rounded.Warning, null, tint = MaterialTheme.colorScheme.error)
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            "手機上的「${newerHere.joinToString("」「")}」比這份備份新,還原會蓋掉備份之後記的內容。",
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                }
                 if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
             }
         },
         confirmButton = {
-            TextButton(onConfirm, enabled = !busy) { Text(if (!shared) "還原" else if (summary.trips.any { it.uuid in existing }) "更新" else "匯入") }
+            TextButton(onConfirm, enabled = !busy) { Text(if (!shared && newerHere.isNotEmpty()) "仍要還原" else if (!shared) "還原" else if (summary.trips.any { it.uuid in existing }) "更新" else "匯入") }
         },
         dismissButton = { TextButton(onDismiss, enabled = !busy) { Text("取消") } },
     )
@@ -206,6 +346,8 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
     var file by remember { mutableStateOf<File?>(null) }
     var summary by remember { mutableStateOf<TripArchive.Summary?>(null) }
     var existing by remember { mutableStateOf(emptySet<String>()) }
+    var additions by remember { mutableStateOf<TripArchive.Additions?>(null) }
+    var newerHere by remember { mutableStateOf(emptyList<String>()) }
     var busy by remember { mutableStateOf(false) }
 
     fun fail(message: String) {
@@ -219,9 +361,13 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
         runCatching {
             val f = ArchiveFiles.copyIn(context, uri)
             val s = withContext(Dispatchers.IO) { TripArchive.readSummary(f) }
+            val adds = if (s.kind == TripArchive.KIND_ADDITIONS) withContext(Dispatchers.IO) { TripArchive.readAdditions(f) } else null
             val known = withContext(Dispatchers.IO) { s.trips.mapNotNull { t -> db.tripDao().findByUuid(t.uuid)?.uuid }.toSet() }
+            val newer = if (s.kind != TripArchive.KIND_BACKUP) emptyList() else withContext(Dispatchers.IO) { TripArchive.newerOnPhone(db, s) }
             withContext(Dispatchers.Main) {
                 existing = known
+                newerHere = newer
+                additions = adds
                 file = f
                 summary = s
             }
@@ -231,12 +377,15 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
     fun finish(result: TripArchive.Result) {
         busy = false
         summary = null
+        additions = null
         ImportInbox.pending = null
         file?.delete()
         when (result) {
             is TripArchive.Result.Failed -> Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
             is TripArchive.Result.Imported -> {
                 val msg = when {
+                    result.kind == TripArchive.KIND_ADDITIONS ->
+                        if (result.updated > 0) "已加入 ${result.updated} 項,記得再分享一次給大家" else "這些項目之前已經加入過了"
                     result.kind == TripArchive.KIND_TRIP && result.updated > 0 -> "已更新同伴分享的旅程"
                     result.kind == TripArchive.KIND_TRIP -> "已匯入,這趟旅程只能看、不能改"
                     else -> "已還原 ${result.tripIds.size} 個旅程"
@@ -247,9 +396,24 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
         }
     }
 
+    additions?.let { adds ->
+        ReviewAdditionsDialog(
+            adds, busy,
+            onDismiss = { ImportInbox.pending = null; summary = null; additions = null; file?.delete() },
+            onAccept = { chosen ->
+                val f = file ?: return@ReviewAdditionsDialog
+                busy = true
+                scope.launch {
+                    val result = TripArchive.importAdditions(db, f, context.filesDir, chosen)
+                    withContext(Dispatchers.Main) { finish(result) }
+                }
+            },
+        )
+        return
+    }
     val s = summary ?: return
     ImportConfirmDialog(
-        s, existing, busy,
+        s, existing, busy, newerHere = newerHere,
         onDismiss = { ImportInbox.pending = null; summary = null },
         onConfirm = {
             val f = file ?: return@ImportConfirmDialog

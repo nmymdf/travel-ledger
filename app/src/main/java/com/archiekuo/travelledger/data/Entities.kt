@@ -104,6 +104,12 @@ data class Expense(
     @ColumnInfo(defaultValue = "") val ocrText: String = "",
     /** The itinerary item this expense was recorded for, if any. */
     val planItemId: Long? = null,
+    /** Stable identity across phones, so an addition sent twice is only added once. */
+    @ColumnInfo(defaultValue = "") val uuid: String = java.util.UUID.randomUUID().toString(),
+    /** The companion who suggested this item, once the organizer accepted it. */
+    val addedBy: String? = null,
+    /** Added by us on a trip someone shared (read-only): ours to change, waiting to be sent to the organizer. */
+    @ColumnInfo(defaultValue = "0") val pending: Boolean = false,
 )
 
 @Entity(
@@ -159,6 +165,12 @@ data class PlanItem(
     val estCost: Double? = null,
     val note: String = "",
     val createdAt: Long = System.currentTimeMillis(),
+    /** Stable identity across phones, so an addition sent twice is only added once. */
+    @ColumnInfo(defaultValue = "") val uuid: String = java.util.UUID.randomUUID().toString(),
+    /** The companion who suggested this item, once the organizer accepted it. */
+    val addedBy: String? = null,
+    /** Added by us on a trip someone shared (read-only): ours to change, waiting to be sent to the organizer. */
+    @ColumnInfo(defaultValue = "0") val pending: Boolean = false,
 )
 
 object PlanStatus {

@@ -54,8 +54,11 @@ data class TripActions(
     val pastePlans: (String, Long?) -> Unit = { _, _ -> },
     val openMap: (PlanRow) -> Unit = {},
     val share: () -> Unit = {},
-    /** A trip shared with us: everything can be viewed, nothing added or changed. */
+    /** A trip shared with us: the organizer's items are view-only; what we add becomes "my additions". */
     val readOnly: Boolean = false,
+    /** My additions on a shared trip not yet taken in by the organizer. */
+    val pendingCount: Int = 0,
+    val sendAdditions: () -> Unit = {},
 )
 
 /** The trip shell: switcher header, four tabs and a central "記一筆" button. */
@@ -115,17 +118,20 @@ fun TripScreen(
                 }
             }
         },
-        bottomBar = { TripBottomBar(current, onTab, if (actions.readOnly) null else ({ actions.addExpense(null) })) },
+        bottomBar = { TripBottomBar(current, onTab) { actions.addExpense(null) } },
     ) { pad ->
         val t = trip ?: return@Scaffold
-        val banner = if (t.readOnly) 48.dp else 0.dp
-        if (t.readOnly) ReadOnlyBanner(t, Modifier.padding(top = pad.calculateTopPadding()).padding(horizontal = 16.dp).height(40.dp))
-        val inner = PaddingValues(top = pad.calculateTopPadding() + banner, bottom = pad.calculateBottomPadding())
-        when (current) {
-            TripTab.TODAY -> TodayTab(t, plans, expenses, today, inner, actions) { onTab(it) }
-            TripTab.PLAN -> PlanTab(t, plans, inner, actions)
-            TripTab.LEDGER -> LedgerTab(t, memberCount, expenses, today, inner, actions)
-            TripTab.STATS -> StatsTab(t, memberCount, expenses, inner)
+        Column(Modifier.padding(top = pad.calculateTopPadding()).fillMaxSize()) {
+            if (t.readOnly) ReadOnlyBanner(t, actions.pendingCount, actions.sendAdditions, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+            Box(Modifier.weight(1f)) {
+                val inner = PaddingValues(bottom = pad.calculateBottomPadding())
+                when (current) {
+                    TripTab.TODAY -> TodayTab(t, plans, expenses, today, inner, actions) { onTab(it) }
+                    TripTab.PLAN -> PlanTab(t, plans, inner, actions)
+                    TripTab.LEDGER -> LedgerTab(t, memberCount, expenses, today, inner, actions)
+                    TripTab.STATS -> StatsTab(t, memberCount, expenses, inner)
+                }
+            }
         }
     }
 
@@ -147,18 +153,18 @@ fun TripScreen(
 }
 
 @Composable
-private fun TripBottomBar(current: TripTab, onTab: (TripTab) -> Unit, onAdd: (() -> Unit)?) {
+private fun TripBottomBar(current: TripTab, onTab: (TripTab) -> Unit, onAdd: () -> Unit) {
     val cs = MaterialTheme.colorScheme
     Box(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().align(Alignment.BottomCenter).background(cs.surfaceContainerLowest)) {
             HorizontalDivider(color = ledger.hairline)
             Row(Modifier.fillMaxWidth().navigationBarsPadding().height(66.dp), verticalAlignment = Alignment.CenterVertically) {
                 listOf(TripTab.TODAY, TripTab.PLAN).forEach { TabItem(it, it == current, Modifier.weight(1f)) { onTab(it) } }
-                if (onAdd != null) Spacer(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
                 listOf(TripTab.LEDGER, TripTab.STATS).forEach { TabItem(it, it == current, Modifier.weight(1f)) { onTab(it) } }
             }
         }
-        if (onAdd != null) Column(
+        Column(
             Modifier.align(Alignment.TopCenter).navigationBarsPadding().offset(y = (-14).dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
@@ -207,7 +213,7 @@ private fun LedgerTab(trip: Trip, memberCount: Int, expenses: List<ExpenseRow>, 
         item { SummaryCard(t, memberCount, expenses, today) }
         if (expenses.isNotEmpty()) item { CategoryCard(expenses, filter) { filter = if (filter == it) null else it } }
         if (expenses.isEmpty()) {
-            item { EmptyHint(Icons.Rounded.ReceiptLong, "還沒有支出", if (actions.readOnly) "對方分享時還沒有記帳" else "點下方「記一筆」記下第一筆") }
+            item { EmptyHint(Icons.Rounded.ReceiptLong, "還沒有支出", if (actions.readOnly) "對方還沒有記帳;你記的會先算「我的補充」" else "點下方「記一筆」記下第一筆") }
         }
         days.forEach { (date, rows) ->
             item(key = "h$date") { DayHeader(t, date, fmtMoney(rows.sumOf { it.homeAmount })) }
@@ -227,7 +233,7 @@ private fun LedgerTab(trip: Trip, memberCount: Int, expenses: List<ExpenseRow>, 
 @Composable
 fun DayHeader(trip: Trip, date: Long, trailing: String?) {
     Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(fmtDayHeader(date), style = MaterialTheme.typography.titleSmall)
+        Text(fmtDayHeader(date), style = MaterialTheme.typography.titleSmall, maxLines = 1, softWrap = false)
         Text(
             when {
                 date < trip.startDate -> "  出發前"
@@ -235,8 +241,9 @@ fun DayHeader(trip: Trip, date: Long, trailing: String?) {
                 else -> "  第 ${date - trip.startDate + 1} 天"
             },
             style = MaterialTheme.typography.bodySmall, color = ledger.textMuted, modifier = Modifier.weight(1f),
+            maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
         )
-        if (trailing != null) Text(trailing, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (trailing != null) Text(trailing, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
     }
 }
 
@@ -365,6 +372,8 @@ fun ExpenseRowItem(e: ExpenseRow, onClick: () -> Unit) {
                 listOfNotNull(e.categoryName ?: "未分類", e.paymentMethodName, e.minuteOfDay?.let { fmtTime(it) }).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1,
             )
+            val who = if (e.pending) "我的補充 · 還沒傳給記帳人" else e.addedBy?.let { "$it 補充" }
+            if (who != null) Text(who, style = MaterialTheme.typography.labelMedium, color = ledger.warning, maxLines = 1)
         }
         Spacer(Modifier.width(8.dp))
         Column(horizontalAlignment = Alignment.End) {
@@ -389,6 +398,11 @@ fun CurrencyBadge(code: String, size: androidx.compose.ui.unit.Dp = 42.dp) {
         Modifier.size(size).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.primaryContainer),
         contentAlignment = Alignment.Center,
     ) {
-        Text(code, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.onPrimaryContainer)
+        // Sized from the badge, not the font setting, so a three-letter code always fits on one line.
+        val fontSize = with(androidx.compose.ui.platform.LocalDensity.current) { (size * 0.3f).toSp() }
+        Text(
+            code, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontSize = fontSize),
+            color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1, softWrap = false,
+        )
     }
 }

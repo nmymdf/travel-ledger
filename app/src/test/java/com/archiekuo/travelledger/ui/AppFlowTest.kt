@@ -134,7 +134,9 @@ class AppFlowTest {
         tap("新增行程")
         assertTrue(seen("景點、餐廳或活動名稱"))
         type(0, "伏見稻荷神社")
-        rule.onAllNodes(hasText("D1", substring = true) and hasClickAction()).onFirst().performClick()
+        // Day tiles show the date with the weekday underneath; the trip starts today.
+        val today = java.time.LocalDate.now()
+        rule.onAllNodesWithText("${today.monthValue}/${today.dayOfMonth}").onFirst().performClick()
         rule.onNodeWithContentDescription("儲存").performClick()
         assertTrue(seen("Day 1"))
         assertTrue(seen("伏見稻荷神社"))
@@ -208,12 +210,22 @@ class AppFlowTest {
         assertTrue("confirmation names the sender", seen("小明 分享的旅程"))
         tap("匯入")
 
-        // The copy opens: banner, no 記一筆, and expenses open as details.
-        assertTrue(rule.onRoot().printToString(), seen("唯讀 · 小明 分享"))
-        assertTrue(rule.onAllNodesWithContentDescription("記一筆").fetchSemanticsNodes().isEmpty())
+        // The copy opens with the organizer named; their expenses open as view-only details.
+        assertTrue(rule.onRoot().printToString(), seen("小明 記帳"))
         tap("帳本")
         tap("湯豆腐")
         assertTrue(seen("支出明細"))
         assertTrue(rule.onAllNodesWithText("儲存").fetchSemanticsNodes().isEmpty())
+        rule.onNodeWithContentDescription("關閉").performClick()
+
+        // What the companion records becomes their own addition, ready to send to the organizer.
+        rule.onNodeWithContentDescription("記一筆").performClick()
+        assertTrue(seen("店家或項目名稱"))
+        typeAndDone(0, "抹茶冰")
+        keys("300")
+        tap("儲存")
+        assertTrue(seen("我補充了 1 項"))
+        assertTrue(seen("我的補充 · 還沒傳給記帳人"))
+        assertTrue(seen("傳給記帳人"))
     }
 }

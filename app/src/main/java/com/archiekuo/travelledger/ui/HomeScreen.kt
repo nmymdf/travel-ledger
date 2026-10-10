@@ -33,6 +33,16 @@ fun tripStatus(start: Long, end: Long, today: LocalDate): String {
     }
 }
 
+/**
+ * The most recently ended trip of my own that finished after the last backup and after the reminder was
+ * last put off, or null when there is nothing new to back up.
+ */
+fun backupReminder(trips: List<TripSummary>, today: LocalDate, lastBackupDay: Long, dismissedDay: Long): TripSummary? {
+    val t = today.toEpochDay()
+    return trips.filter { it.sharedBy == null && it.endDate < t && it.endDate >= lastBackupDay && it.endDate > dismissedDay }
+        .maxByOrNull { it.endDate }
+}
+
 @Composable
 fun TripListScreen(
     trips: List<TripSummary>,
@@ -41,6 +51,9 @@ fun TripListScreen(
     onSettings: () -> Unit,
     today: LocalDate = LocalDate.now(),
     version: String = "",
+    reminder: TripSummary? = null,
+    onBackup: () -> Unit = {},
+    onLater: () -> Unit = {},
 ) {
     val activeCount = trips.count { !it.ended(today) }
     var filter by rememberSaveable { mutableStateOf(if (activeCount > 0 || trips.isEmpty()) TripFilter.ACTIVE else TripFilter.ALL) }
@@ -58,6 +71,7 @@ fun TripListScreen(
         ) {
             // With an active or upcoming trip the list is a switcher; adding is a small "+" in the header.
             item { HomeHeader(onSettings, onAdd = onAdd.takeIf { activeCount > 0 }, version = version) }
+            if (reminder != null) item { BackupReminderCard(reminder, onBackup, onLater) }
             if (activeCount == 0) item { PillButton("新增旅程", onAdd, icon = Icons.Rounded.Add, height = 50.dp) }
             if (trips.isNotEmpty()) {
                 item {
@@ -79,6 +93,27 @@ fun TripListScreen(
                 if (t == shown.first()) FeaturedTripCard(t, today) { onOpen(t.id) }
                 else CompactTripCard(t, today) { onOpen(t.id) }
             }
+        }
+    }
+}
+
+@Composable
+private fun BackupReminderCard(trip: TripSummary, onBackup: () -> Unit, onLater: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    LedgerCard(Modifier.fillMaxWidth(), padding = PaddingValues(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconTile(Icons.Rounded.Backup, Palette[2], size = 40.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text("「${trip.name}」結束了", style = MaterialTheme.typography.titleSmall)
+                Text("備份一下,換手機或手機遺失都不怕", style = MaterialTheme.typography.bodySmall, color = cs.onSurfaceVariant)
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            TextButton(onLater) { Text("稍後") }
+            Spacer(Modifier.width(8.dp))
+            Button(onBackup, shape = RoundedCornerShape(50)) { Text("備份") }
         }
     }
 }
@@ -160,7 +195,9 @@ private fun EmptyTrips(title: String, firstRun: Boolean) {
 
 @Composable
 private fun TripMeta(t: TripSummary) {
-    Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    // Wraps instead of squeezing when the font is large.
+    @OptIn(ExperimentalLayoutApi::class)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         t.sharedBy?.let { MetaItem(Icons.Rounded.Visibility, "$it 分享") }
         if (t.memberCount > 0) MetaItem(Icons.Rounded.Group, "${t.memberCount} 人")
         t.currencies?.takeIf { it.isNotBlank() }?.let { MetaItem(Icons.Rounded.CurrencyExchange, it.replace(",", " · ")) }
@@ -176,7 +213,7 @@ private fun FeaturedTripCard(t: TripSummary, today: LocalDate, onClick: () -> Un
         }
         Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(t.name, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(fmtRange(t.startDate, t.endDate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(fmtRange(t.startDate, t.endDate, today.year), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TripMeta(t)
             Spacer(Modifier.height(4.dp))
             val budget = t.budget?.takeIf { it > 0 }
@@ -204,18 +241,19 @@ private fun FeaturedTripCard(t: TripSummary, today: LocalDate, onClick: () -> Un
 
 @Composable
 private fun CompactTripCard(t: TripSummary, today: LocalDate, onClick: () -> Unit) {
+    // Text gets the full width beside the cover; the amount sits on the last line so nothing is squeezed into a column.
     LedgerCard(Modifier.fillMaxWidth(), onClick = onClick, padding = PaddingValues(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TripCover(t.coverPath, t.name, Modifier.size(72.dp).clip(RoundedCornerShape(14.dp)), t.startDate, t.coverTheme)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(t.name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(fmtRange(t.startDate, t.endDate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                TripMeta(t)
-            }
-            Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(end = 6.dp)) {
-                Text(fmtMoney(t.totalHome), style = MaterialTheme.typography.titleSmall)
-                Text(tripStatus(t.startDate, t.endDate, today), style = MaterialTheme.typography.bodySmall, color = ledger.textMuted)
+                Text(t.name, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(fmtRange(t.startDate, t.endDate, today.year), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(tripStatus(t.startDate, t.endDate, today), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.weight(1f)) { TripMeta(t) }
+                    Text(fmtMoney(t.totalHome), style = MaterialTheme.typography.titleSmall, maxLines = 1, softWrap = false, modifier = Modifier.padding(start = 8.dp))
+                }
             }
         }
     }

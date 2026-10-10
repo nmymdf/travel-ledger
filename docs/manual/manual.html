@@ -117,7 +117,7 @@
   <div class="sub">使用說明書</div>
   <p class="tagline">出國旅遊的記帳與行程規劃 App。記一筆只要三步,收據拍照自動辨識,出發前做的功課也能一起帶著走。</p>
   <div class="meta">
-    <div>適用版本 v0.7.1<br>文件日期 2026 年 10 月 9 日<br>Android 10 以上</div>
+    <div>適用版本 v0.8.0<br>文件日期 2026 年 10 月 10 日<br>Android 10 以上</div>
     <div style="text-align:right"><div style="font-size:10pt;color:var(--muted)">作者</div><span class="sign">ArchieKUO</span></div>
   </div>
 </section>
@@ -337,13 +337,13 @@
   <table>
     <tr><th style="width:26mm">欄位</th><th>說明</th></tr>
     <tr><td>名稱、分類</td><td>分類與記帳共用,所以從行程記帳時分類會自動對上。</td></tr>
-    <tr><td>哪一天</td><td>選「待排」或 D1、D2…;「加時間」可指定時間。</td></tr>
-    <tr><td>狀態</td><td>未去/已去/跳過。</td></tr>
-    <tr><td>訂位</td><td>不用/需要訂位/已訂好。已訂好可填訂位時間、人數、確認編號。</td></tr>
+    <tr><td>哪一天</td><td>一排方形日期格子(日期下面是星期),往右滑看其他天;第一格是「待排」。「加時間」可指定時間。</td></tr>
+    <tr><td>狀態、訂位</td><td>同一行的兩個小選單:未去/已去/跳過;不用訂位/需要訂位/已訂好。已訂好可填訂位時間、人數、確認編號。</td></tr>
     <tr><td>地點</td><td>地址或 Google 地圖連結。右邊的地圖鈕可直接開地圖。</td></tr>
     <tr><td>預估花費</td><td>新台幣,選填。</td></tr>
     <tr><td>筆記</td><td>必點菜色、營業時間、注意事項…</td></tr>
   </table>
+  <div class="note"><b>網址和電話可以點</b>地點、訂位資訊、筆記和支出的備註裡,只要有網址(例如訂位網頁、Google 地圖連結)或電話號碼,下面就會出現「↗ 開啟」或「撥打」按鈕。在看明細的畫面,網址和電話直接是藍色底線,點了就開。</div>
 
   <h3>兩種檢視</h3>
   <ul>
@@ -426,7 +426,7 @@
       <p>從旅程畫面點左上角的旅程名稱進入。</p>
       <ul>
         <li>上方分頁:<b>進行中</b>(含即將出發)/<b>已結束</b>/<b>全部</b>。</li>
-        <li>第一趟旅程用大卡片顯示封面、狀態(例如「旅行中 · 第 3 天」「還有 38 天出發」)、預算進度。</li>
+        <li>第一趟旅程用大卡片顯示封面、狀態(例如「旅行中 · 第 3 天」「還有 38 天出發」)、預算進度。其他旅程用小卡片:名稱、日期(今年的旅程只寫月/日)、狀態、人數幣別與金額,字體調很大也不會擠成直排。</li>
         <li>有進行中的旅程時,新增旅程是右上角的小「＋」;沒有任何旅程時才顯示大按鈕。</li>
         <li>標題列顯示版本號與作者簽名。</li>
       </ul>
@@ -463,7 +463,7 @@
   <div class="chapter-head"><span class="no">12</span><h2>備份與分享給同伴</h2></div>
   <p class="lead">兩件事用的是同一種檔案(.zip):<b>備份</b>是給自己換手機用,<b>分享</b>是一趟旅程給同伴看。都不需要網路帳號。</p>
 
-  <h3>分享給同伴(一個人記帳,大家都能看)</h3>
+  <h3>分享給同伴(一個人記帳,大家都能看,也能補充)</h3>
   <div class="split">
     <div>
       <ol class="steps">
@@ -473,7 +473,7 @@
         <li>同伴在 LINE 點檔案 →「用其他應用程式開啟」→ 選<b>卡溜趴</b>,確認後按「匯入」。</li>
       </ol>
       <ul>
-        <li>同伴手機上的這趟旅程是<b>唯讀</b>:上方顯示「唯讀 · 小明 分享 · 更新時間」,沒有「記一筆」,不能修改或刪除單筆。可以看帳本、統計、行程、支出明細,也能點地圖導航。</li>
+        <li>同伴手機上,上方顯示「小明 記帳 · 更新時間」。記帳人記的內容<b>只能看、不能改</b>,點開是明細畫面;可以看帳本、統計、行程,也能點地圖導航。</li>
         <li>你之後又記了帳,<b>再分享一次</b>就好。同伴打開新檔案按「更新」,會更新同一趟旅程,不會重複出現。</li>
         <li>同伴不需要先建立旅程。他們若刪除這份副本,不影響你的資料。</li>
       </ul>
@@ -482,9 +482,23 @@
   </div>
   <div class="phones two">
     <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_importDialog.png"><figcaption>同伴打開檔案</figcaption></figure>
-    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_sharedLedger_sharedledger_light.png"><figcaption>同伴看到的唯讀旅程</figcaption></figure>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_sharedLedger_sharedledger_light.png"><figcaption>同伴看到的旅程</figcaption></figure>
   </div>
   <div class="note"><b>同伴需要安裝卡溜趴</b>目前只有 Android 版。iPhone 的同伴暫時無法打開這個檔案。</div>
+
+  <h3>同伴補充 → 記帳人審核</h3>
+  <p>同伴想到漏記的帳,或想去的地方,也可以自己加,不會弄亂記帳人的帳:</p>
+  <ol class="steps">
+    <li>同伴在分享來的旅程照常按「記一筆」或新增行程。這些項目標示「<b>我的補充 · 還沒傳給記帳人</b>」,自己可以修改或刪除。</li>
+    <li>上方會出現「我補充了 N 項」,按「<b>傳給記帳人</b>」,用 LINE 傳給記帳人(可選擇附上收據照片)。</li>
+    <li>記帳人點檔案用卡溜趴開啟,出現<b>補充清單</b>,要的打勾、不要的取消,按「加入」。加入的項目會標示「小美 補充」。</li>
+    <li>記帳人<b>再分享一次</b>給大家。同伴打開後,被加入的項目變成正式的(不會重複),沒被加入的仍留在同伴手機上當「我的補充」。</li>
+  </ol>
+  <p>沒有人補充時,一切跟原本一樣:不會多出任何檔案或步驟。同一個補充檔打開兩次,也不會重複加入。</p>
+  <div class="phones two">
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_sendAdditions.png"><figcaption>同伴:傳給記帳人</figcaption></figure>
+    <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_reviewAdditions.png"><figcaption>記帳人:勾選要加入的</figcaption></figure>
+  </div>
 
   <h3 style="break-before: page">備份全部資料</h3>
   <div class="split">
@@ -495,6 +509,7 @@
         <li><b>存到手機</b>:選一個資料夾(例如「下載」)存檔。<br><b>傳送到…</b>:傳到 LINE Keep、Google 雲端硬碟、Email 等,手機遺失也不怕。</li>
       </ol>
       <p>檔名像「卡溜趴備份-2026-10-09.zip」。</p>
+      <p><b>旅程結束提醒</b>:你自己的旅程結束後,旅程列表最上面會提醒「某某旅程結束了」,按「備份」直接備份,按「稍後」先不管(下一趟結束時會再提醒)。</p>
     </div>
     <figure class="phone"><img src="../../app/src/test/snapshots/images/com.archiekuo.travelledger.snap_ScreenSnapshots_backupDialog.png"><figcaption>備份</figcaption></figure>
   </div>
@@ -507,8 +522,9 @@
   </ol>
   <ul>
     <li>手機上已經有的同一趟旅程,會被備份裡的內容<b>取代</b>;其他旅程保留不動,不會重複。</li>
+    <li>如果手機上的資料<b>比備份新</b>(備份之後又記了帳),確認畫面會用紅字警告,按鈕變成「仍要還原」,避免不小心蓋掉。</li>
     <li>備份裡缺少的分類、付款方式會自動補上。</li>
-    <li>同伴分享給你的唯讀旅程,還原後仍是唯讀。</li>
+    <li>同伴分享給你的旅程,還原後仍是同伴記帳;你還沒傳出去的補充也會保留。</li>
   </ul>
 </section>
 
@@ -526,7 +542,7 @@
     <tr><td>照片存在哪?</td><td>App 內部儲存空間,收據與回憶分開存放。回憶照片另外存一份在手機相簿的「卡溜趴」資料夾。</td></tr>
     <tr><td>刪除旅程會怎樣?</td><td>該旅程的所有支出、行程、App 內的照片都會刪除,無法復原。已存到手機相簿的照片不受影響。</td></tr>
     <tr><td>換手機怎麼辦?</td><td>舊手機「設定 → 備份全部資料」(含照片),傳到 LINE Keep 或雲端硬碟;新手機安裝卡溜趴後打開這個檔案還原。</td></tr>
-    <tr><td>同伴可以一起記帳嗎?</td><td>目前是一個人記帳、分享給大家看。同伴的副本不能修改。</td></tr>
+    <tr><td>同伴可以一起記帳嗎?</td><td>可以補充:同伴記的先算「我的補充」,傳給記帳人審核加入後,再分享一次大家就統一了(見第 12 章)。</td></tr>
     <tr><td>同伴打開說「是你自己記的旅程」?</td><td>這是你自己分享出去的檔案,傳回自己手機不需要匯入,原本的旅程不受影響。</td></tr>
     <tr><td>LINE 點檔案沒有出現卡溜趴?</td><td>在 LINE 檔案畫面按右上角「⋯」或分享鈕,選「用其他應用程式開啟」;或先存到手機,再從卡溜趴「設定 → 從檔案還原或匯入」選擇。</td></tr>
   </table>
@@ -549,6 +565,7 @@
   <h3>版本紀錄</h3>
   <table>
     <tr><th style="width:22mm">版本</th><th>內容</th></tr>
+    <tr><td>v0.8.0</td><td>網址和電話可以點;同伴補充 → 傳給記帳人審核 → 再分享統一;旅程結束提醒備份、還原前若手機較新會警告;編輯行程改成一排可左右滑的方形日期格子,狀態和訂位合併一行;首頁小卡片排版修正,所有畫面在最大字體下不再出現直排(新增自動檢查)。</td></tr>
     <tr><td>v0.7.1</td><td>App 改名為「卡溜趴」(原「旅帳」),資料與覆蓋安裝不受影響;之後存到相簿的照片放在「卡溜趴」資料夾。</td></tr>
     <tr><td>v0.7.0</td><td>分享給同伴(用 LINE 傳旅程檔,同伴匯入後唯讀,再分享會更新);備份全部資料與還原(可選含照片);設定「我的名字」;正式簽章金鑰。</td></tr>
     <tr><td>v0.6.1</td><td>編輯旅程時可手動挑選封面插畫;照片封面可改回插畫。</td></tr>

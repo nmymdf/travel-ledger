@@ -33,6 +33,10 @@ data class AppSettings(
     val saveMemoriesToGallery: Boolean = true,
     /** Shown on trips shared with companions. */
     val myName: String = "",
+    /** Epoch day of the last backup (-1: never), for the "trip ended, back it up" reminder. */
+    val lastBackupDay: Long = -1,
+    /** Epoch day the reminder was last put off; it comes back when another trip ends. */
+    val reminderDismissedDay: Long = -1,
 )
 
 object AppPrefs {
@@ -45,6 +49,8 @@ object AppPrefs {
             fontSize = p.getString("font_size", null)?.let { runCatching { FontSize.valueOf(it) }.getOrNull() } ?: FontSize.STANDARD,
             saveMemoriesToGallery = p.getBoolean("save_memories", true),
             myName = p.getString("my_name", "") ?: "",
+            lastBackupDay = p.getLong("last_backup_day", -1),
+            reminderDismissedDay = p.getLong("reminder_dismissed_day", -1),
         )
     }
 
@@ -54,6 +60,8 @@ object AppPrefs {
             .putString("font_size", s.fontSize.name)
             .putBoolean("save_memories", s.saveMemoriesToGallery)
             .putString("my_name", s.myName)
+            .putLong("last_backup_day", s.lastBackupDay)
+            .putLong("reminder_dismissed_day", s.reminderDismissedDay)
             .apply()
     }
 }

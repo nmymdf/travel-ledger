@@ -10,6 +10,7 @@ import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -33,6 +34,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import com.archiekuo.travelledger.data.Category
 import com.archiekuo.travelledger.data.ExpenseRow
 import com.archiekuo.travelledger.data.PlanItem
@@ -92,7 +97,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.onTrip(
             }
         }
     }
-    item { SectionHeader("今天的行程") { if (!actions.readOnly) SmallAdd("新增") { actions.addPlan(t) } } }
+    item { SectionHeader("今天的行程") { SmallAdd("新增") { actions.addPlan(t) } } }
     if (todays.isEmpty()) {
         item { Text("今天還沒有安排,可以從「行程」的待排清單排進來。", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     } else {
@@ -204,8 +209,8 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Segmented(listOf("依天", "依類型"), if (byType) 1 else 0, Modifier.weight(1f)) { byType = it == 1 }
-                if (!actions.readOnly) IconButton({ pasting = true }) { Icon(Icons.Rounded.ContentPaste, "貼上多筆") }
-                if (!actions.readOnly) Button(
+                IconButton({ pasting = true }) { Icon(Icons.Rounded.ContentPaste, "貼上多筆") }
+                Button(
                     { actions.addPlan(null) }, shape = RoundedCornerShape(50),
                     contentPadding = PaddingValues(horizontal = 14.dp), modifier = Modifier.height(40.dp),
                 ) {
@@ -220,14 +225,11 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
                 Column(Modifier.fillMaxWidth().padding(vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     IconTile(Icons.Rounded.Map, MaterialTheme.colorScheme.primary, size = 64.dp, corner = 20.dp)
                     Spacer(Modifier.height(12.dp))
-                    if (actions.readOnly) {
-                        Text("對方還沒有安排行程", style = MaterialTheme.typography.titleMedium)
-                        return@Column
-                    }
-                    Text("把出發前做的功課放進來", style = MaterialTheme.typography.titleMedium)
+                    Text(if (actions.readOnly) "對方還沒有安排行程" else "把出發前做的功課放進來", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
                     Text(
-                        "想去的景點、要訂位的餐廳都可以先放進「待排」,之後再排到某一天。\n在 Google 地圖按「分享 → 卡溜趴」也能直接加入。",
+                        if (actions.readOnly) "你想去的地方可以先加進來,再按上方「傳給記帳人」。"
+                        else "想去的景點、要訂位的餐廳都可以先放進「待排」,之後再排到某一天。\n在 Google 地圖按「分享 → 卡溜趴」也能直接加入。",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(16.dp))
@@ -267,7 +269,7 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
                     Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Day ${day - trip.startDate + 1}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                         Text("  ${fmtShortDate(day)}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        if (!actions.readOnly) SmallAdd("加入") { actions.addPlan(day) }
+                        SmallAdd("加入") { actions.addPlan(day) }
                     }
                 }
                 item(key = "c$day") {
@@ -352,7 +354,7 @@ private fun PlanRowItem(p: PlanRow, trip: Trip, showDate: Boolean, withActions: 
     ) {
         // Status: tap toggles done.
         Box(
-            Modifier.size(44.dp).clip(CircleShape).clickable(enabled = !actions.readOnly) {
+            Modifier.size(44.dp).clip(CircleShape).clickable(enabled = !actions.readOnly || p.pending) {
                 actions.setPlanStatus(p.id, if (done) PlanStatus.TODO else PlanStatus.DONE)
             },
             contentAlignment = Alignment.Center,
@@ -390,6 +392,8 @@ private fun PlanRowItem(p: PlanRow, trip: Trip, showDate: Boolean, withActions: 
                     Reservation.NEEDED -> add("需訂位" to ledger.danger)
                     Reservation.BOOKED -> add(("已訂" + p.reservationNote.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()) to ledger.success)
                 }
+                if (p.pending) add("我的補充" to ledger.warning)
+                p.addedBy?.let { add("$it 補充" to ledger.warning) }
                 if (p.spent > 0) add("已花 ${fmtMoney(p.spent)}" to MaterialTheme.colorScheme.primary)
                 else p.estCost?.let { add("預估 ${fmtMoney(it)}" to MaterialTheme.colorScheme.onSurfaceVariant) }
             }
@@ -403,7 +407,7 @@ private fun PlanRowItem(p: PlanRow, trip: Trip, showDate: Boolean, withActions: 
             if (p.location.isNotBlank()) {
                 IconButton({ actions.openMap(p) }) { Icon(Icons.Rounded.Directions, "導航", tint = MaterialTheme.colorScheme.primary) }
             }
-            if (!actions.readOnly) IconButton({ actions.addExpense(p.id) }) { Icon(Icons.Rounded.AddCard, "記一筆", tint = MaterialTheme.colorScheme.primary) }
+            IconButton({ actions.addExpense(p.id) }) { Icon(Icons.Rounded.AddCard, "記一筆", tint = MaterialTheme.colorScheme.primary) }
         }
     }
 }
@@ -474,26 +478,27 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
             SectionHeader("哪一天") {
                 SmallAdd(p.minuteOfDay?.let { "時間 ${fmtTime(it)}" } ?: "加時間", Icons.Rounded.Schedule) { pickTime = true }
             }
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                item { SelectPill("待排", p.date == null, { actions.edit { it.copy(date = null) } }) }
-                items((t.startDate..t.endDate).toList()) { d ->
-                    SelectPill("D${d - t.startDate + 1} ${fmtShortDate(d)}", p.date == d, { actions.edit { it.copy(date = d) } })
-                }
-            }
+            DayGrid(t, p.date) { d -> actions.edit { it.copy(date = d) } }
 
-            if (!isNew) {
-                SectionHeader("狀態")
-                Segmented(listOf("未去", "已去", "跳過"), listOf(PlanStatus.TODO, PlanStatus.DONE, PlanStatus.SKIPPED).indexOf(p.status).coerceAtLeast(0)) { i ->
-                    actions.edit { it.copy(status = listOf(PlanStatus.TODO, PlanStatus.DONE, PlanStatus.SKIPPED)[i]) }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (!isNew) {
+                    val statuses = listOf(PlanStatus.TODO, PlanStatus.DONE, PlanStatus.SKIPPED)
+                    ChoiceChip(
+                        listOf("未去", "已去", "跳過"), statuses.indexOf(p.status).coerceAtLeast(0),
+                        listOf(Icons.Rounded.RadioButtonUnchecked, Icons.Rounded.CheckCircle, Icons.Rounded.RemoveCircleOutline),
+                        Modifier.weight(1f),
+                    ) { i -> actions.edit { it.copy(status = statuses[i]) } }
                 }
-            }
-
-            SectionHeader("訂位")
-            Segmented(listOf("不用", "需要訂位", "已訂好"), listOf(Reservation.NONE, Reservation.NEEDED, Reservation.BOOKED).indexOf(p.reservation).coerceAtLeast(0)) { i ->
-                actions.edit { it.copy(reservation = listOf(Reservation.NONE, Reservation.NEEDED, Reservation.BOOKED)[i]) }
+                val res = listOf(Reservation.NONE, Reservation.NEEDED, Reservation.BOOKED)
+                ChoiceChip(
+                    listOf("不用訂位", "需要訂位", "已訂好"), res.indexOf(p.reservation).coerceAtLeast(0),
+                    listOf(Icons.Rounded.EventBusy, Icons.Rounded.NotificationImportant, Icons.Rounded.EventAvailable),
+                    Modifier.weight(1f),
+                ) { i -> actions.edit { it.copy(reservation = res[i]) } }
             }
             if (p.reservation != Reservation.NONE) {
                 FieldBox("訂位資訊") { FieldInput(p.reservationNote, { v -> actions.edit { it.copy(reservationNote = v) } }, "例如:19:00 · 4 位 · 確認碼 AB123") }
+                LinkButtons(p.reservationNote)
             }
 
             FieldBox(
@@ -504,6 +509,7 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                     }
                 },
             ) { FieldInput(p.location, { v -> actions.edit { it.copy(location = v) } }, "地址或 Google 地圖連結") }
+            LinkButtons(p.location)
 
             FieldBox("預估花費(選填)", trailing = { Text("NT$", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }) {
                 FieldInput(
@@ -524,6 +530,7 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                     },
                 )
             }
+            LinkButtons(p.note)
 
             if (!isNew) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -555,6 +562,77 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                 confirmButton = { TextButton({ confirmDelete = false; actions.delete() }) { Text("刪除", color = MaterialTheme.colorScheme.error) } },
                 dismissButton = { TextButton({ confirmDelete = false }) { Text("取消") } },
             )
+        }
+    }
+}
+
+/**
+ * Which day: one row of square tiles (date, weekday underneath) that scrolls sideways.
+ * Tiles are sized so three to five fit on screen, depending on the text size; the chosen day is scrolled into view.
+ */
+@Composable
+private fun DayGrid(trip: Trip, selected: Long?, onSelect: (Long?) -> Unit) {
+    val measurer = rememberTextMeasurer()
+    val dateStyle = MaterialTheme.typography.titleMedium
+    val density = LocalDensity.current
+    val needed = with(density) { measurer.measure("10/28", dateStyle).size.width.toDp() } + 16.dp
+    val days = remember(trip.startDate, trip.endDate) { listOf<Long?>(null) + (trip.startDate..trip.endDate).toList() }
+    val state = rememberLazyListState(initialFirstVisibleItemIndex = (days.indexOf(selected) - 1).coerceAtLeast(0))
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val gap = 8.dp
+        // Fit whole tiles plus a peek of the next one, so it is clear the row scrolls.
+        val cols = ((maxWidth + gap) / (needed + gap)).toInt().coerceIn(3, 5)
+        val tile = if (days.size > cols) (maxWidth - gap * cols) / (cols + 0.4f) else (maxWidth - gap * (cols - 1)) / cols
+        LazyRow(state = state, horizontalArrangement = Arrangement.spacedBy(gap)) {
+            items(days) { d ->
+                val date = d?.let { LocalDate.ofEpochDay(it) }
+                DayTile(
+                    top = date?.let { "${it.monthValue}/${it.dayOfMonth}" } ?: "待排",
+                    bottom = date?.let { weekday(it) } ?: "未定",
+                    selected = selected == d, size = tile, style = dateStyle,
+                ) { onSelect(d) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DayTile(top: String, bottom: String, selected: Boolean, size: Dp, style: TextStyle, onClick: () -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val shape = RoundedCornerShape(14.dp)
+    Column(
+        Modifier.width(size).heightIn(min = size).clip(shape)
+            .background(if (selected) cs.primary else cs.surfaceContainerLowest)
+            .border(1.dp, if (selected) cs.primary else ledger.hairline, shape)
+            .clickable(onClick = onClick).padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    ) {
+        Text(top, style = style, color = if (selected) cs.onPrimary else cs.onSurface, maxLines = 1, softWrap = false)
+        Text(bottom, style = MaterialTheme.typography.labelMedium, color = if (selected) cs.onPrimary.copy(alpha = 0.85f) else cs.onSurfaceVariant, maxLines = 1, softWrap = false)
+    }
+}
+
+/** One compact choice: shows the current option, tap for a menu of all of them. */
+@Composable
+private fun ChoiceChip(options: List<String>, selected: Int, icons: List<ImageVector>, modifier: Modifier, onSelect: (Int) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val cs = MaterialTheme.colorScheme
+    Box(modifier) {
+        Row(
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cs.surfaceContainerLowest)
+                .border(1.dp, ledger.hairline, RoundedCornerShape(14.dp)).clickable { open = true }
+                .padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(icons[selected], null, Modifier.size(20.dp), tint = cs.primary)
+            Spacer(Modifier.width(8.dp))
+            Text(options[selected], style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+            Icon(Icons.Rounded.ArrowDropDown, null, tint = cs.onSurfaceVariant)
+        }
+        DropdownMenu(open, { open = false }) {
+            options.forEachIndexed { i, o ->
+                DropdownMenuItem(text = { Text(o) }, leadingIcon = { Icon(icons[i], null) }, onClick = { open = false; onSelect(i) })
+            }
         }
     }
 }

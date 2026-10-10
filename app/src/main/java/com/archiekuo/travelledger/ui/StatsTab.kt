@@ -145,8 +145,8 @@ private fun DailyBars(trip: Trip, expenses: List<ExpenseRow>) {
         Spacer(Modifier.height(12.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom) {
             bars.forEach { (label, v) ->
-                Column(Modifier.width(52.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (v > 0) fmtPlain(Math.round(v).toDouble()) else "", style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                Column(Modifier.widthIn(min = 52.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(if (v > 0) fmtPlain(Math.round(v).toDouble()) else "", style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false)
                     Spacer(Modifier.height(4.dp))
                     Box(
                         Modifier.width(26.dp).height((120 * (v / max)).dp.coerceAtLeast(3.dp))
@@ -154,7 +154,7 @@ private fun DailyBars(trip: Trip, expenses: List<ExpenseRow>) {
                             .background(if (label == "出發前") MaterialTheme.colorScheme.tertiary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.primary),
                     )
                     Spacer(Modifier.height(6.dp))
-                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                    Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, softWrap = false, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                 }
             }
         }
@@ -173,9 +173,10 @@ private fun PaymentBreakdown(expenses: List<ExpenseRow>, total: Double) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(paymentIcon(name), null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.width(8.dp))
-                    Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                    Text("${fmtMoney(amt)} · ${Math.round(amt / total * 100)}%", style = MaterialTheme.typography.titleSmall)
+                    Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f), maxLines = 1, softWrap = false)
+                    Text("${Math.round(amt / total * 100)}%", style = MaterialTheme.typography.titleSmall, softWrap = false)
                 }
+                Text(fmtMoney(amt), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 28.dp))
                 Spacer(Modifier.height(6.dp))
                 Box(Modifier.fillMaxWidth().height(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
                     Box(Modifier.fillMaxHeight().fillMaxWidth((amt / total).toFloat()).clip(CircleShape).background(MaterialTheme.colorScheme.primary))

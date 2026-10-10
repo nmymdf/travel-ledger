@@ -71,16 +71,25 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
         else if (!nav.popBackStack("trips", inclusive = false)) nav.navigate("trips")
     }
 
+    fun backedUp() = onSettings(settings.copy(lastBackupDay = LocalDate.now().toEpochDay()))
+
     NavHost(nav, startDestination = "trips") {
         composable("trips") {
             val trips by listVm.trips.collectAsStateWithLifecycle()
+            var backingUp by remember { mutableStateOf(false) }
+            val today = LocalDate.now()
             TripListScreen(
                 trips,
                 onOpen = { nav.navigate("trip/$it") },
                 onAdd = { nav.navigate("trip/new") },
                 onSettings = { nav.navigate("settings") },
+                today = today,
                 version = BuildConfig.VERSION_NAME,
+                reminder = backupReminder(trips, today, settings.lastBackupDay, settings.reminderDismissedDay),
+                onBackup = { backingUp = true },
+                onLater = { onSettings(settings.copy(reminderDismissedDay = today.toEpochDay())) },
             )
+            if (backingUp) BackupFlow(db, onClose = { backingUp = false }, onBackedUp = ::backedUp)
         }
         composable("trip/new") {
             TripEditRoute(null, emptyList(), emptyList(), onBack = { nav.popBackStack() }) { trip, members, rates ->
@@ -110,6 +119,8 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
             val plans by vm.plans.collectAsStateWithLifecycle()
             var tab by rememberSaveable { mutableStateOf<TripTab?>(null) }
             var sharing by remember { mutableStateOf(false) }
+            var sendingAdditions by remember { mutableStateOf(false) }
+            val pendingCount by vm.pendingCount.collectAsStateWithLifecycle()
             var shareBusy by remember { mutableStateOf(false) }
             val scope = rememberCoroutineScope()
             val readOnly = trip?.readOnly == true
@@ -129,9 +140,26 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     openMap = { p -> openMap(p.title, p.location) },
                     share = { sharing = true },
                     readOnly = readOnly,
+                    pendingCount = pendingCount,
+                    sendAdditions = { sendingAdditions = true },
                 ),
             )
             val t = trip
+            if (sendingAdditions && t != null) {
+                SendAdditionsDialog(t, pendingCount, settings.myName, shareBusy, onDismiss = { sendingAdditions = false }) { name, photos ->
+                    if (name != settings.myName) onSettings(settings.copy(myName = name))
+                    shareBusy = true
+                    scope.launch {
+                        runCatching { ArchiveFiles.exportAdditions(context, db, t, name, photos) }
+                            .onSuccess { uri ->
+                                ArchiveFiles.send(context, uri, "傳給${t.sharedBy}", "$name 補充「${t.name}」(請用卡溜趴打開)")
+                            }
+                            .onFailure { android.widget.Toast.makeText(context, "傳送失敗", android.widget.Toast.LENGTH_LONG).show() }
+                        shareBusy = false
+                        sendingAdditions = false
+                    }
+                }
+            }
             if (sharing && t != null) {
                 ShareTripDialog(t.name, settings.myName, shareBusy, onDismiss = { sharing = false }) { name, photos ->
                     if (name != settings.myName) onSettings(settings.copy(myName = name))
@@ -162,7 +190,10 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                 key = "expense$id/$eid/$plan",
                 factory = viewModelFactory { initializer { ExpenseEditViewModel(app, db, id, eid, settings.saveMemoriesToGallery, plan) } },
             )
-            val readOnly by produceState(false, id) { value = db.tripDao().getTrip(id)?.readOnly == true }
+            // On a shared trip the organizer's expenses are view-only; my own additions stay editable.
+            val readOnly by produceState(false, id, eid) {
+                value = db.tripDao().getTrip(id)?.readOnly == true && eid != null && db.expenseDao().get(eid)?.pending != true
+            }
             ExpenseEditRoute(vm, eid == null, readOnly, onDone = { nav.popBackStack() })
         }
         composable(
@@ -186,7 +217,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                 },
             )
             val categories by vm.categories.collectAsStateWithLifecycle()
-            val readOnly = vm.trip?.readOnly == true
+            val readOnly = vm.trip?.readOnly == true && pid != null && vm.item?.pending != true
             if (readOnly) {
                 PlanDetailScreen(vm.item, vm.trip, categories, onBack = { nav.popBackStack() }) { p -> openMap(p.title, p.location) }
                 return@composable
@@ -206,39 +237,10 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
         composable("settings") {
             val scope = rememberCoroutineScope()
             var backingUp by remember { mutableStateOf(false) }
-            var backupBusy by remember { mutableStateOf(false) }
-            var backupPhotos by remember { mutableStateOf(true) }
-            fun backupDone(ok: Boolean) {
-                backupBusy = false
-                backingUp = false
-                if (!ok) android.widget.Toast.makeText(context, "備份失敗", android.widget.Toast.LENGTH_LONG).show()
-            }
-            val saveTo = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { target ->
-                if (target == null) { backupBusy = false; return@rememberLauncherForActivityResult }
-                scope.launch {
-                    val ok = runCatching { ArchiveFiles.exportTo(context, db, target, db.tripDao().allIds(), backupPhotos) }.isSuccess
-                    if (ok) android.widget.Toast.makeText(context, "已備份", android.widget.Toast.LENGTH_SHORT).show()
-                    backupDone(ok)
-                }
-            }
             val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
                 if (uri != null) ImportInbox.pending = uri
             }
-            if (backingUp) {
-                BackupDialog(
-                    backupBusy, onDismiss = { backingUp = false },
-                    onSave = { photos -> backupPhotos = photos; backupBusy = true; saveTo.launch(ArchiveFiles.backupName()) },
-                    onSend = { photos ->
-                        backupBusy = true
-                        scope.launch {
-                            runCatching {
-                                ArchiveFiles.exportForShare(context, db, ArchiveFiles.backupName(), com.archiekuo.travelledger.backup.TripArchive.KIND_BACKUP, db.tripDao().allIds(), photos, null)
-                            }.onSuccess { uri -> ArchiveFiles.send(context, uri, "卡溜趴備份", "卡溜趴備份檔") }
-                                .also { backupDone(it.isSuccess) }
-                        }
-                    },
-                )
-            }
+            if (backingUp) BackupFlow(db, onClose = { backingUp = false }, onBackedUp = ::backedUp)
             SettingsScreen(
                 settings, onSettings,
                 onBack = { nav.popBackStack() },

@@ -63,11 +63,29 @@ interface TripDao {
     @Query("SELECT id FROM trip ORDER BY startDate")
     suspend fun allIds(): List<Long>
 
-    @Query("DELETE FROM expense WHERE tripId = :tripId") suspend fun deleteExpenses(tripId: Long)
-    @Query("DELETE FROM plan_item WHERE tripId = :tripId") suspend fun deletePlans(tripId: Long)
+    @Query("DELETE FROM expense WHERE tripId = :tripId AND pending = 0") suspend fun deleteExpenses(tripId: Long)
+    @Query("DELETE FROM plan_item WHERE tripId = :tripId AND pending = 0") suspend fun deletePlans(tripId: Long)
+
+    @Query("SELECT COUNT(*) FROM expense WHERE tripId = :tripId AND pending = 1")
+    fun observePendingExpenses(tripId: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM plan_item WHERE tripId = :tripId AND pending = 1")
+    fun observePendingPlans(tripId: Long): Flow<Int>
     @Query("DELETE FROM member WHERE tripId = :tripId") suspend fun deleteMembers(tripId: Long)
 
-    /** Empties a trip (photo rows go with their expenses) so an import can refill it under the same id. */
+    @Query("DELETE FROM expense WHERE tripId = :tripId") suspend fun deleteAllExpenses(tripId: Long)
+    @Query("DELETE FROM plan_item WHERE tripId = :tripId") suspend fun deleteAllPlans(tripId: Long)
+
+    /** Empties a trip completely, for restoring a backup over it. */
+    @Transaction
+    suspend fun clearAll(tripId: Long) {
+        deleteAllExpenses(tripId)
+        deleteAllPlans(tripId)
+        deleteMembers(tripId)
+        deleteRates(tripId)
+    }
+
+    /** Empties a trip (photo rows go with their expenses) so an import can refill it under the same id; my pending additions stay. */
     @Transaction
     suspend fun clearContents(tripId: Long) {
         deleteExpenses(tripId)
@@ -134,6 +152,9 @@ data class ExpenseRow(
     val note: String,
     val thumbPath: String?,
     val planItemId: Long?,
+    val addedBy: String? = null,
+    /** My own addition on a shared trip, not yet taken in by the organizer. */
+    val pending: Boolean = false,
 )
 
 /** A previously used expense title and the category it was last filed under. */
@@ -145,7 +166,8 @@ interface ExpenseDao {
         """SELECT e.id, e.date, e.minuteOfDay, e.title, e.amount, e.currency, e.rate, e.homeAmount,
                   e.categoryId, c.name AS categoryName, c.icon AS categoryIcon, c.color AS categoryColor,
                   p.name AS paymentMethodName, e.note,
-                  (SELECT path FROM photo WHERE expenseId = e.id ORDER BY id LIMIT 1) AS thumbPath, e.planItemId
+                  (SELECT path FROM photo WHERE expenseId = e.id ORDER BY id LIMIT 1) AS thumbPath, e.planItemId,
+                  e.addedBy, e.pending
            FROM expense e
            LEFT JOIN category c ON c.id = e.categoryId
            LEFT JOIN payment_method p ON p.id = e.paymentMethodId
@@ -159,6 +181,12 @@ interface ExpenseDao {
 
     @Query("SELECT * FROM expense WHERE tripId = :tripId ORDER BY id")
     suspend fun forTrip(tripId: Long): List<Expense>
+
+    @Query("SELECT uuid FROM expense WHERE tripId = :tripId")
+    suspend fun uuids(tripId: Long): List<String>
+
+    @Query("UPDATE expense SET planItemId = :planId WHERE id = :id")
+    suspend fun setPlan(id: Long, planId: Long?)
 
     @Query("SELECT * FROM expense WHERE tripId = :tripId ORDER BY createdAt DESC LIMIT 1")
     suspend fun latest(tripId: Long): Expense?
@@ -202,6 +230,8 @@ data class PlanRow(
     val location: String,
     val estCost: Double?,
     val spent: Double,
+    val addedBy: String? = null,
+    val pending: Boolean = false,
 )
 
 @Dao
@@ -209,7 +239,8 @@ interface PlanDao {
     @Query(
         """SELECT pl.id, pl.title, pl.categoryId, c.name AS categoryName, c.icon AS categoryIcon, c.color AS categoryColor,
                   pl.date, pl.minuteOfDay, pl.status, pl.reservation, pl.reservationNote, pl.location, pl.estCost,
-                  COALESCE((SELECT SUM(homeAmount) FROM expense WHERE planItemId = pl.id), 0) AS spent
+                  COALESCE((SELECT SUM(homeAmount) FROM expense WHERE planItemId = pl.id), 0) AS spent,
+                  pl.addedBy, pl.pending
            FROM plan_item pl LEFT JOIN category c ON c.id = pl.categoryId
            WHERE pl.tripId = :tripId
            ORDER BY pl.date IS NULL, pl.date, pl.minuteOfDay IS NULL, pl.minuteOfDay, pl.id"""
@@ -221,6 +252,9 @@ interface PlanDao {
 
     @Query("SELECT * FROM plan_item WHERE tripId = :tripId ORDER BY id")
     suspend fun forTrip(tripId: Long): List<PlanItem>
+
+    @Query("SELECT uuid FROM plan_item WHERE tripId = :tripId")
+    suspend fun uuids(tripId: Long): List<String>
 
     @Insert suspend fun insert(item: PlanItem): Long
     @Insert suspend fun insertAll(items: List<PlanItem>)
@@ -252,6 +286,9 @@ interface PhotoDao {
 
     @Query("SELECT path FROM photo WHERE expenseId IN (SELECT id FROM expense WHERE tripId = :tripId)")
     suspend fun pathsForTrip(tripId: Long): List<String>
+
+    @Query("SELECT path FROM photo WHERE expenseId IN (SELECT id FROM expense WHERE tripId = :tripId AND pending = 0)")
+    suspend fun pathsForOfficial(tripId: Long): List<String>
 
     @Insert suspend fun insert(photo: Photo): Long
     @Update suspend fun update(photo: Photo)

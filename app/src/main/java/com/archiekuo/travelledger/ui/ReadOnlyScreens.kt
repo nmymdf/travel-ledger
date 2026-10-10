@@ -25,21 +25,37 @@ import com.archiekuo.travelledger.data.Trip
 import java.time.Instant
 import java.time.ZoneId
 
-/** Shown on a trip someone shared with us: who sent it and when; nothing here can be changed. */
+/**
+ * Shown on a trip someone shared with us: who sent it and when, and what I have added myself
+ * (with the button that sends it to the organizer).
+ */
 @Composable
-fun ReadOnlyBanner(trip: Trip, modifier: Modifier = Modifier) {
+fun ReadOnlyBanner(trip: Trip, pendingCount: Int, onSend: () -> Unit, modifier: Modifier = Modifier) {
     val cs = MaterialTheme.colorScheme
     val at = trip.sharedAt?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDateTime() }
-    Row(
-        modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer).padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Rounded.Visibility, null, Modifier.size(20.dp), tint = cs.onSecondaryContainer)
-        Spacer(Modifier.width(8.dp))
-        Text(
-            "唯讀 · ${trip.sharedBy} 分享" + (at?.let { " · %d/%d %02d:%02d 更新".format(it.monthValue, it.dayOfMonth, it.hour, it.minute) } ?: ""),
-            style = MaterialTheme.typography.bodyMedium, color = cs.onSecondaryContainer,
-        )
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(cs.secondaryContainer).padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Visibility, null, Modifier.size(20.dp), tint = cs.onSecondaryContainer)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                "${trip.sharedBy} 記帳" + (at?.let { " · %d/%d %02d:%02d 更新".format(it.monthValue, it.dayOfMonth, it.hour, it.minute) } ?: ""),
+                style = MaterialTheme.typography.bodyMedium, color = cs.onSecondaryContainer,
+            )
+        }
+        if (pendingCount > 0) {
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "我補充了 $pendingCount 項", style = MaterialTheme.typography.bodyMedium, color = cs.onSecondaryContainer,
+                    modifier = Modifier.weight(1f),
+                )
+                Button(onSend, shape = RoundedCornerShape(50), contentPadding = PaddingValues(horizontal = 14.dp)) {
+                    Icon(Icons.Rounded.Send, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("傳給記帳人", softWrap = false)
+                }
+            }
+        }
     }
 }
 
@@ -49,7 +65,7 @@ private fun DetailLine(icon: ImageVector, label: String, value: String) {
         Icon(icon, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(12.dp))
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(72.dp))
-        Text(value, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        LinkText(value, Modifier.weight(1f))
     }
 }
 

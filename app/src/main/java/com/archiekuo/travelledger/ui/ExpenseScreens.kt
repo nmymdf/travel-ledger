@@ -400,6 +400,7 @@ private fun NoteField(s: EditState, actions: ExpenseActions) {
         }
     } else {
         FieldBox("備註") { FieldInput(s.note, { v -> actions.edit { it.copy(note = v) } }, "例如:點了特製拉麵") }
+        LinkButtons(s.note)
     }
 }
 

@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Trip::class, TripCurrencyRate::class, Member::class, Category::class,
         PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class, PlanItem::class,
     ],
-    version = 6,
+    version = 7,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
@@ -74,7 +74,19 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+        /** v7: expenses and plan items get an identity, who suggested them, and a "my addition" flag. */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                for (table in listOf("expense", "plan_item")) {
+                    db.execSQL("ALTER TABLE $table ADD COLUMN uuid TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("UPDATE $table SET uuid = lower(hex(randomblob(16))) WHERE uuid = ''")
+                    db.execSQL("ALTER TABLE $table ADD COLUMN addedBy TEXT")
+                    db.execSQL("ALTER TABLE $table ADD COLUMN pending INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
 
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "travel-ledger.db").setup().build()

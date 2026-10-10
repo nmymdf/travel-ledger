@@ -26,7 +26,17 @@ fun fmtDateWithWeekday(epochDay: Long): String =
 fun fmtDayHeader(epochDay: Long): String =
     LocalDate.ofEpochDay(epochDay).let { "${it.monthValue}月${it.dayOfMonth}日 ${weekday(it)}" }
 
-fun fmtRange(start: Long, end: Long): String = "${fmtDate(start)} – ${fmtDate(end)}"
+/** "10/22 – 10/27" in [thisYear]; otherwise the year is written once: "2023/12/20 – 12/26" (or on both ends if they differ). */
+fun fmtRange(start: Long, end: Long, thisYear: Int = LocalDate.now().year): String {
+    val a = LocalDate.ofEpochDay(start)
+    val b = LocalDate.ofEpochDay(end)
+    fun md(d: LocalDate) = "${d.monthValue}/${d.dayOfMonth}"
+    return when {
+        a.year == b.year && a.year == thisYear -> "${md(a)} – ${md(b)}"
+        a.year == b.year -> "${a.year}/${md(a)} – ${md(b)}"
+        else -> "${a.year}/${md(a)} – ${b.year}/${md(b)}"
+    }
+}
 
 private fun symbol(currency: String) = if (currency == HOME_CURRENCY) "NT$" else currency
 

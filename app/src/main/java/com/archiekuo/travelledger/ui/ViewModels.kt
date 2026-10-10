@@ -30,6 +30,7 @@ import com.archiekuo.travelledger.photo.PhotoProcessor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -68,6 +69,9 @@ class TripDetailViewModel(private val db: AppDatabase, private val id: Long) : V
     val rates: StateFlow<List<TripCurrencyRate>> = db.expenseDao().observeRates(id).stateIn(this, emptyList())
     val plans: StateFlow<List<PlanRow>> = db.planDao().observeRows(id).stateIn(this, emptyList())
     val categories: StateFlow<List<Category>> = db.lookupDao().observeCategories().stateIn(this, emptyList())
+    /** My additions on a shared trip, not yet taken in by its organizer. */
+    val pendingCount: StateFlow<Int> = combine(db.tripDao().observePendingExpenses(id), db.tripDao().observePendingPlans(id)) { a, b -> a + b }
+        .stateIn(this, 0)
 
     fun setPlanStatus(planId: Long, status: String) = viewModelScope.launch { db.planDao().setStatus(planId, status) }
 
@@ -76,9 +80,10 @@ class TripDetailViewModel(private val db: AppDatabase, private val id: Long) : V
     /** Pasted lines become unscheduled items (or items on [date]), with a guessed category. */
     fun addParsed(places: List<ParsedPlace>, date: Long?) = viewModelScope.launch {
         val byName = categories.value.associateBy { it.name }
+        val mine = trip.value?.readOnly ?: db.tripDao().getTrip(id)?.readOnly ?: false
         db.planDao().insertAll(
             places.map { p ->
-                PlanItem(tripId = id, title = p.title, location = p.location, date = date, categoryId = p.categoryHint?.let { byName[it]?.id })
+                PlanItem(tripId = id, title = p.title, location = p.location, date = date, categoryId = p.categoryHint?.let { byName[it]?.id }, pending = mine)
             },
         )
     }
@@ -148,9 +153,12 @@ class ExpenseEditViewModel(
     private var original: Expense? = null
     private val originalPhotos = mutableListOf<Photo>()
     private var ocrText = ""
+    /** On a trip someone shared with us, what we record becomes our own pending addition. */
+    private var sharedTrip = false
 
     init {
         viewModelScope.launch {
+            sharedTrip = db.tripDao().getTrip(tripId)?.readOnly == true
             tripRates = db.expenseDao().getRates(tripId).associate { it.currency to it.rate }
             suggestions = db.expenseDao().titleSuggestions()
             val existing = expenseId?.let { db.expenseDao().get(it) }
@@ -265,6 +273,7 @@ class ExpenseEditViewModel(
             val base = original ?: Expense(
                 tripId = tripId, date = s.date, amount = amount, currency = s.currency, rate = rate,
                 homeAmount = home, categoryId = s.categoryId, paymentMethodId = s.paymentId, payerId = null,
+                pending = sharedTrip,
             )
             val e = base.copy(
                 date = s.date, minuteOfDay = s.minuteOfDay, title = s.title.trim(), amount = amount,
@@ -273,7 +282,7 @@ class ExpenseEditViewModel(
                 planItemId = original?.planItemId ?: planItemId,
             )
             val id = if (original == null) dao.insert(e) else { dao.update(e); e.id }
-            if (original == null && planItemId != null) db.planDao().setStatus(planItemId, PlanStatus.DONE)
+            if (original == null && planItemId != null && !sharedTrip) db.planDao().setStatus(planItemId, PlanStatus.DONE)
 
             val photoDao = db.photoDao()
             val keptIds = photos.mapNotNull { it.id }.toSet()
@@ -293,7 +302,7 @@ class ExpenseEditViewModel(
             }
 
             // First time a foreign currency is used in this trip: remember its rate as the trip default.
-            if (s.currency != HOME_CURRENCY && s.currency !in tripRates) {
+            if (s.currency != HOME_CURRENCY && s.currency !in tripRates && !sharedTrip) {
                 dao.upsertRate(TripCurrencyRate(tripId, s.currency, rate))
             }
             onDone()
@@ -393,7 +402,7 @@ class PlanEditViewModel(
         val i = item?.takeIf { it.title.isNotBlank() } ?: return
         viewModelScope.launch {
             val clean = i.copy(title = i.title.trim(), location = i.location.trim(), note = i.note.trim())
-            if (planId == null) db.planDao().insert(clean) else db.planDao().update(clean)
+            if (planId == null) db.planDao().insert(clean.copy(pending = trip?.readOnly == true)) else db.planDao().update(clean)
             onDone()
         }
     }
