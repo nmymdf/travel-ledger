@@ -37,6 +37,8 @@ data class AppSettings(
     val lastBackupDay: Long = -1,
     /** Epoch day the reminder was last put off; it comes back when another trip ends. */
     val reminderDismissedDay: Long = -1,
+    /** Calculator key height in dp, set by dragging the handle above the keypad. */
+    val keypadKeyHeight: Float = KEY_HEIGHT_DEFAULT,
 )
 
 object AppPrefs {
@@ -51,6 +53,7 @@ object AppPrefs {
             myName = p.getString("my_name", "") ?: "",
             lastBackupDay = p.getLong("last_backup_day", -1),
             reminderDismissedDay = p.getLong("reminder_dismissed_day", -1),
+            keypadKeyHeight = p.getFloat("keypad_key_height", KEY_HEIGHT_DEFAULT).coerceIn(KEY_HEIGHT_MIN, KEY_HEIGHT_MAX),
         )
     }
 
@@ -62,6 +65,7 @@ object AppPrefs {
             .putString("my_name", s.myName)
             .putLong("last_backup_day", s.lastBackupDay)
             .putLong("reminder_dismissed_day", s.reminderDismissedDay)
+            .putFloat("keypad_key_height", s.keypadKeyHeight)
             .apply()
     }
 }

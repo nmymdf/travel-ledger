@@ -37,4 +37,34 @@ class PlanParserTest {
         assertEquals("淺草寺", p.title)
         assertEquals("景點", p.categoryHint)
     }
+
+    @Test fun dayNotesSplitIntoPlans() {
+        val note = """
+            第三天
+            09:00 景福宮 韓服體驗
+            中午 土俗村蔘雞湯
+            https://maps.app.goo.gl/abc
+            下午3點半 北村韓屋村 → 仁寺洞 → Olive Young 明洞店
+            晚上 明洞夜市
+            回飯店休息
+            記得帶護照
+        """.trimIndent()
+        val items = PlanParser.splitNote(note)
+        assertEquals(
+            listOf("景福宮 韓服體驗", "土俗村蔘雞湯", "北村韓屋村", "仁寺洞", "Olive Young 明洞店", "明洞夜市", "回飯店休息", "記得帶護照"),
+            items.map { it.title },
+        )
+        assertEquals(listOf(9 * 60, 12 * 60, 15 * 60 + 30, null, null, 18 * 60, null, null), items.map { it.minuteOfDay })
+        assertEquals(listOf("景點", "吃", "景點", "景點", "購物", "景點", "住宿", null), items.map { it.categoryHint })
+        // A link on its own line belongs to the item above it.
+        assertEquals("https://maps.app.goo.gl/abc", items[1].location)
+    }
+
+    @Test fun timesInNotes() {
+        assertEquals(19 * 60, PlanParser.findTime("19:00 烤肉"))
+        assertEquals(15 * 60, PlanParser.findTime("下午3點 咖啡"))
+        assertEquals(10 * 60 + 15, PlanParser.findTime("10點15分 集合"))
+        assertEquals(8 * 60, PlanParser.findTime("飯店早餐"))
+        assertEquals(null, PlanParser.findTime("景福宮"))
+    }
 }

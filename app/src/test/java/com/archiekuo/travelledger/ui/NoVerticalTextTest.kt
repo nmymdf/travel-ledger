@@ -194,6 +194,13 @@ class NoVerticalTextDialogTest {
             false, {}, {},
         )
     }
+    @Test fun splitDialog() = dialog("拆成多個行程") {
+        SplitNoteDialog(
+            com.archiekuo.travelledger.data.PlanItem(1, 1, "第三天行程", null, 20750, note = "09:00 景福宮 韓服體驗\n中午 土俗村蔘雞湯\n下午3點半 北村韓屋村 → 仁寺洞\n記得帶護照"),
+            listOf("吃", "交通", "購物", "住宿", "景點", "其他").mapIndexed { i, n -> com.archiekuo.travelledger.data.Category(i + 1L, n, i) },
+            {},
+        ) { _, _ -> }
+    }
     @Test fun backupDialog() = dialog("備份") { BackupDialog(false, {}, {}, {}) }
     @Test fun importDialog() = dialog("匯入確認") {
         val start = LocalDate.of(2026, 10, 22).toEpochDay()

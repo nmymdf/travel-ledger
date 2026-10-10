@@ -248,4 +248,13 @@ class ScreenSnapshots {
             ExpenseDetailScreen(editState.copy(note = "訂位 https://tabelog.com/tokyo 電話 03-1234-5678"), categories, methods, emptyList(), {}, {})
         }
     }
+
+    @Test fun splitNote() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) {
+            SplitNoteDialog(
+                PlanItem(1, 1, "第三天行程", null, d(6, 12), note = "09:00 淺草寺 → 仲見世通\n中午 一蘭拉麵 本店\n下午3點 晴空塔\nhttps://maps.app.goo.gl/x\n晚上 敘敘苑 燒肉\n記得帶護照"),
+                categories, {},
+            ) { _, _ -> }
+        }
+    }
 }

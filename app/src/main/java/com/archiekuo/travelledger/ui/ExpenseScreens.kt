@@ -59,6 +59,8 @@ data class ExpenseActions(
     val save: () -> Unit = {},
     val delete: () -> Unit = {},
     val back: () -> Unit = {},
+    /** Remember the calculator size the user dragged to (key height in dp). */
+    val saveKeypadHeight: (Float) -> Unit = {},
 )
 
 @Composable
@@ -74,7 +76,9 @@ fun ExpenseEditScreen(
     processing: Boolean,
     actions: ExpenseActions,
     viewingPhoto: Int? = null,
+    keypadKeyHeight: Float = KEY_HEIGHT_DEFAULT,
 ) {
+    var keyHeight by remember(keypadKeyHeight) { mutableStateOf(keypadKeyHeight.dp) }
     var pickCurrency by remember { mutableStateOf(false) }
     var pickDate by remember { mutableStateOf(false) }
     var pickTime by remember { mutableStateOf(false) }
@@ -117,6 +121,9 @@ fun ExpenseEditScreen(
                         onKey = actions.key, onCurrency = actions.currency,
                         onOtherCurrency = { pickCurrency = true }, onEditRate = { editRate = true },
                         onSave = actions.save,
+                        keyHeight = keyHeight,
+                        onKeyHeight = { keyHeight = it },
+                        onKeyHeightDone = { actions.saveKeypadHeight(keyHeight.value) },
                     )
                 }
             }
@@ -399,7 +406,7 @@ private fun NoteField(s: EditState, actions: ExpenseActions) {
             Text("加備註", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     } else {
-        FieldBox("備註") { FieldInput(s.note, { v -> actions.edit { it.copy(note = v) } }, "例如:點了特製拉麵") }
+        FieldBox("備註") { LinkAwareInput(s.note, { v -> actions.edit { it.copy(note = v) } }, "例如:點了特製拉麵", singleLine = false) }
         LinkButtons(s.note)
     }
 }

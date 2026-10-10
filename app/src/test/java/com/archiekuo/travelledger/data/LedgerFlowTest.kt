@@ -12,6 +12,7 @@ import com.archiekuo.travelledger.ui.TripListViewModel
 import com.archiekuo.travelledger.ui.currentTrip
 import com.archiekuo.travelledger.ui.toHomeAmount
 import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -240,6 +241,26 @@ class LedgerFlowTest {
         lookups.moveCategory(6, 0)
         val names = runBlocking { db.lookupDao().observeCategories().first() }.map { it.name }
         assertEquals("溫泉旅館", names.first())
+    }
+
+    /** A whole day written in one item's note becomes separate items on that day, with times and categories. */
+    @Test fun splittingADayNote() {
+        val trip = createTrip()
+        val dayNote = runBlocking {
+            db.planDao().insert(PlanItem(tripId = trip, title = "第三天行程", date = d(6, 12), note = "09:00 淺草寺\n中午 一蘭拉麵 本店\n晚上 新宿王子飯店 check-in"))
+        }
+        val editor = PlanEditViewModel(db, trip, dayNote, null, null)
+        runBlocking { snapshotFlow { editor.item }.first { it != null } }
+        val parsed = PlanParser.splitNote(editor.item!!.note)
+        val byName = runBlocking { db.lookupDao().getCategories() }.associateBy { it.name }
+        var done = false
+        editor.split(parsed.map { p -> PlanItem(tripId = trip, title = p.title, date = d(6, 12), minuteOfDay = p.minuteOfDay, categoryId = p.categoryHint?.let { byName[it]?.id }) }, deleteOriginal = true) { done = true }
+        assertTrue(done)
+        val plans = runBlocking { db.planDao().observeRows(trip).first() }
+        assertEquals(listOf("淺草寺", "一蘭拉麵 本店", "新宿王子飯店 check-in"), plans.map { it.title })
+        assertEquals(listOf(9 * 60, 12 * 60, 18 * 60), plans.map { it.minuteOfDay })
+        assertEquals(listOf("景點", "吃", "住宿"), plans.map { it.categoryName })
+        assertTrue(plans.all { it.date == d(6, 12) })
     }
 
     @Test fun planningAndRecordingFromThePlan() {

@@ -1,5 +1,12 @@
 package com.archiekuo.travelledger.ui
 
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -68,16 +75,38 @@ fun KeypadPanel(
     onEditRate: () -> Unit,
     onSave: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Height of one key; the handle on top changes it (four rows, so dragging by d moves each key by d/4). */
+    keyHeight: Dp = KEY_HEIGHT_DEFAULT.dp,
+    onKeyHeight: ((Dp) -> Unit)? = null,
+    onKeyHeightDone: () -> Unit = {},
 ) {
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+    val density = LocalDensity.current
+    val latest by rememberUpdatedState(keyHeight)
     var menu by remember { mutableStateOf(false) }
     Column(
         modifier.fillMaxWidth().shadow(16.dp, shape).clip(shape)
             .background(cs.surfaceContainerLowest)
             .navigationBarsPadding()
-            .padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 10.dp),
+            .padding(start = 14.dp, end = 14.dp, top = if (onKeyHeight != null) 0.dp else 12.dp, bottom = 10.dp),
     ) {
+        if (onKeyHeight != null) {
+            // Drag handle: pull up for bigger keys, push down for more room above.
+            Box(
+                Modifier.fillMaxWidth().height(22.dp)
+                    .draggable(
+                        rememberDraggableState { px ->
+                            val d = with(density) { px.toDp() }
+                            onKeyHeight((latest - d / 4).coerceIn(KEY_HEIGHT_MIN.dp, KEY_HEIGHT_MAX.dp))
+                        },
+                        Orientation.Vertical,
+                        onDragStopped = { onKeyHeightDone() },
+                    )
+                    .semantics { contentDescription = "拖曳調整計算機高度" },
+                contentAlignment = Alignment.Center,
+            ) { Box(Modifier.size(width = 44.dp, height = 5.dp).clip(RoundedCornerShape(50)).background(cs.outline)) }
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box {
                 Row(
@@ -136,7 +165,7 @@ fun KeypadPanel(
             }
         }
         val gap = 8.dp
-        val keyH = 52.dp
+        val keyH = keyHeight
         Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
             Column(Modifier.weight(3f), verticalArrangement = Arrangement.spacedBy(gap)) {
                 listOf(listOf("7", "8", "9"), listOf("4", "5", "6"), listOf("1", "2", "3"), listOf("00", "0", ".")).forEach { row ->
@@ -167,6 +196,10 @@ fun KeypadPanel(
         }
     }
 }
+
+const val KEY_HEIGHT_DEFAULT = 52f
+const val KEY_HEIGHT_MIN = 40f
+const val KEY_HEIGHT_MAX = 80f
 
 @Composable
 private fun Key(label: String, height: Dp, modifier: Modifier, muted: Boolean = false, onClick: () -> Unit) {

@@ -46,6 +46,7 @@ import com.archiekuo.travelledger.data.PlanStatus
 import com.archiekuo.travelledger.data.Reservation
 import com.archiekuo.travelledger.data.Trip
 import java.time.LocalDate
+import com.archiekuo.travelledger.logic.PlanParser
 
 // ───────────────────────────── Today ─────────────────────────────
 
@@ -451,12 +452,15 @@ data class PlanActions(
     val back: () -> Unit = {},
     val record: () -> Unit = {},
     val openMap: (PlanItem) -> Unit = {},
+    /** Turn the note into separate plan items on the same day (optionally removing this one). */
+    val split: (items: List<PlanItem>, deleteOriginal: Boolean) -> Unit = { _, _ -> },
 )
 
 @Composable
 fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isNew: Boolean, actions: PlanActions) {
     var pickTime by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var splitting by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -497,7 +501,7 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                 ) { i -> actions.edit { it.copy(reservation = res[i]) } }
             }
             if (p.reservation != Reservation.NONE) {
-                FieldBox("訂位資訊") { FieldInput(p.reservationNote, { v -> actions.edit { it.copy(reservationNote = v) } }, "例如:19:00 · 4 位 · 確認碼 AB123") }
+                FieldBox("訂位資訊") { LinkAwareInput(p.reservationNote, { v -> actions.edit { it.copy(reservationNote = v) } }, "例如:19:00 · 4 位 · 確認碼 AB123", singleLine = false) }
                 LinkButtons(p.reservationNote)
             }
 
@@ -508,7 +512,7 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                         Icon(Icons.Rounded.Map, "在地圖開啟", tint = MaterialTheme.colorScheme.primary)
                     }
                 },
-            ) { FieldInput(p.location, { v -> actions.edit { it.copy(location = v) } }, "地址或 Google 地圖連結") }
+            ) { LinkAwareInput(p.location, { v -> actions.edit { it.copy(location = v) } }, "地址或 Google 地圖連結", singleLine = false) }
             LinkButtons(p.location)
 
             FieldBox("預估花費(選填)", trailing = { Text("NT$", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant) }) {
@@ -520,17 +524,16 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
             }
 
             FieldBox("筆記") {
-                val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
-                BasicTextField(
-                    p.note, { v -> actions.edit { it.copy(note = v) } }, Modifier.fillMaxWidth().heightIn(min = 60.dp),
-                    textStyle = style, cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                    decorationBox = { inner ->
-                        if (p.note.isEmpty()) Text("必點菜色、營業時間、注意事項…", style = style, color = ledger.textMuted)
-                        inner()
-                    },
-                )
+                LinkAwareInput(p.note, { v -> actions.edit { it.copy(note = v) } }, "必點菜色、營業時間、注意事項…", singleLine = false, minHeight = 60.dp)
             }
             LinkButtons(p.note)
+            if (!isNew && p.note.lines().count { it.isNotBlank() } >= 2) {
+                OutlinedButton({ splitting = true }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
+                    Icon(Icons.Rounded.CallSplit, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("把筆記拆成多個行程")
+                }
+            }
 
             if (!isNew) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -553,6 +556,12 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                 confirmButton = { TextButton({ actions.edit { it.copy(minuteOfDay = st.hour * 60 + st.minute) }; pickTime = false }) { Text("確定") } },
                 dismissButton = { TextButton({ actions.edit { it.copy(minuteOfDay = null) }; pickTime = false }) { Text("不指定時間") } },
             )
+        }
+        if (splitting) {
+            SplitNoteDialog(p, categories, onDismiss = { splitting = false }) { items, deleteOriginal ->
+                splitting = false
+                actions.split(items, deleteOriginal)
+            }
         }
         if (confirmDelete) {
             AlertDialog(
@@ -635,6 +644,82 @@ private fun ChoiceChip(options: List<String>, selected: Int, icons: List<ImageVe
             }
         }
     }
+}
+
+/**
+ * Preview of a note split into plan items: every line is listed (nothing is silently dropped), with the guessed
+ * time and category. Untick lines that are not places, tap a category to change it.
+ */
+@Composable
+fun SplitNoteDialog(source: PlanItem, categories: List<Category>, onDismiss: () -> Unit, onCreate: (List<PlanItem>, Boolean) -> Unit) {
+    val parsed = remember(source.note) { PlanParser.splitNote(source.note) }
+    val byName = categories.associateBy { it.name }
+    val chosen = remember(source.note) { mutableStateListOf(*Array(parsed.size) { true }) }
+    val cats = remember(source.note) { mutableStateListOf(*parsed.map { p -> p.categoryHint?.let { byName[it]?.id } }.toTypedArray()) }
+    var deleteOriginal by remember { mutableStateOf(true) }
+    var menuFor by remember { mutableStateOf<Int?>(null) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(Icons.Rounded.CallSplit, null) },
+        title = { Text("拆成 ${chosen.count { it }} 個行程") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    "每一行一個行程,排在" + (source.date?.let { " ${fmtShortDate(it)} " } ?: "「待排」") + "。不是地點的行取消勾選;分類猜錯點一下改。",
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                parsed.forEachIndexed { i, item ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(chosen[i], { chosen[i] = it })
+                        Column(Modifier.weight(1f)) {
+                            Text(item.title, style = MaterialTheme.typography.bodyLarge)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                item.minuteOfDay?.let {
+                                    Text(fmtTime(it), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                    Spacer(Modifier.width(8.dp))
+                                }
+                                val cat = categories.firstOrNull { it.id == cats[i] }
+                                Box {
+                                    Text(
+                                        (cat?.name ?: "未分類") + " ▾",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = if (cat == null) ledger.warning else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { menuFor = i }.padding(horizontal = 4.dp, vertical = 2.dp),
+                                    )
+                                    DropdownMenu(menuFor == i, { menuFor = null }) {
+                                        categories.forEach { c ->
+                                            DropdownMenuItem(text = { Text(c.name) }, onClick = { cats[i] = c.id; menuFor = null })
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth().clickable { deleteOriginal = !deleteOriginal }, verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(deleteOriginal, { deleteOriginal = it })
+                    Text("拆完刪除原本的「${source.title}」", style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                {
+                    val items = parsed.indices.filter { chosen[it] }.map { i ->
+                        val p = parsed[i]
+                        PlanItem(
+                            tripId = source.tripId, title = p.title, categoryId = cats[i], date = source.date,
+                            minuteOfDay = p.minuteOfDay, location = p.location, pending = source.pending,
+                        )
+                    }
+                    onCreate(items, deleteOriginal)
+                },
+                enabled = chosen.any { it },
+            ) { Text("建立") }
+        },
+        dismissButton = { TextButton(onDismiss) { Text("取消") } },
+    )
 }
 
 /** Large single-line title input used at the top of editors. */

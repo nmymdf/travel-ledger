@@ -136,7 +136,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     openPlan = { pid -> nav.navigate("trip/$id/plan/$pid") },
                     setPlanStatus = { pid, st -> vm.setPlanStatus(pid, st) },
                     movePlans = { ids, date -> vm.movePlans(ids, date) },
-                    pastePlans = { text, date -> vm.addParsed(com.archiekuo.travelledger.logic.PlanParser.parseLines(text), date) },
+                    pastePlans = { text, date -> vm.addParsed(com.archiekuo.travelledger.logic.PlanParser.splitNote(text), date) },
                     openMap = { p -> openMap(p.title, p.location) },
                     share = { sharing = true },
                     readOnly = readOnly,
@@ -194,7 +194,11 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
             val readOnly by produceState(false, id, eid) {
                 value = db.tripDao().getTrip(id)?.readOnly == true && eid != null && db.expenseDao().get(eid)?.pending != true
             }
-            ExpenseEditRoute(vm, eid == null, readOnly, onDone = { nav.popBackStack() })
+            ExpenseEditRoute(
+                vm, eid == null, readOnly, settings.keypadKeyHeight,
+                onKeypadHeight = { h -> onSettings(settings.copy(keypadKeyHeight = h)) },
+                onDone = { nav.popBackStack() },
+            )
         }
         composable(
             "trip/{id}/plan/{pid}?date={date}&shared={shared}",
@@ -231,6 +235,12 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     back = { nav.popBackStack() },
                     record = { pid?.let { p -> nav.navigate("trip/$id/expense/0?plan=$p") } },
                     openMap = { p -> openMap(p.title, p.location) },
+                    split = { items, deleteOriginal ->
+                        vm.split(items, deleteOriginal) {
+                            android.widget.Toast.makeText(context, "已建立 ${items.size} 個行程", android.widget.Toast.LENGTH_SHORT).show()
+                            nav.popBackStack()
+                        }
+                    },
                 ),
             )
         }
@@ -291,7 +301,10 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
 
 /** Expense editor wired to the camera, photo picker and gallery. */
 @Composable
-private fun ExpenseEditRoute(vm: ExpenseEditViewModel, isNew: Boolean, readOnly: Boolean, onDone: () -> Unit) {
+private fun ExpenseEditRoute(
+    vm: ExpenseEditViewModel, isNew: Boolean, readOnly: Boolean, keypadKeyHeight: Float,
+    onKeypadHeight: (Float) -> Unit, onDone: () -> Unit,
+) {
     val context = LocalContext.current
     val categories by vm.categories.collectAsStateWithLifecycle()
     val methods by vm.methods.collectAsStateWithLifecycle()
@@ -341,7 +354,9 @@ private fun ExpenseEditRoute(vm: ExpenseEditViewModel, isNew: Boolean, readOnly:
             applyReceipt = vm::applyReceipt, dismissReceipt = vm::dismissReceipt,
             save = { vm.save(onDone) }, delete = { vm.delete(onDone) },
             back = { vm.cancel(); onDone() },
+            saveKeypadHeight = onKeypadHeight,
         ),
+        keypadKeyHeight = keypadKeyHeight,
     )
 }
 

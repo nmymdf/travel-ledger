@@ -83,7 +83,10 @@ class TripDetailViewModel(private val db: AppDatabase, private val id: Long) : V
         val mine = trip.value?.readOnly ?: db.tripDao().getTrip(id)?.readOnly ?: false
         db.planDao().insertAll(
             places.map { p ->
-                PlanItem(tripId = id, title = p.title, location = p.location, date = date, categoryId = p.categoryHint?.let { byName[it]?.id }, pending = mine)
+                PlanItem(
+                    tripId = id, title = p.title, location = p.location, date = date, minuteOfDay = p.minuteOfDay,
+                    categoryId = p.categoryHint?.let { byName[it]?.id }, pending = mine,
+                )
             },
         )
     }
@@ -410,6 +413,20 @@ class PlanEditViewModel(
     fun delete(onDone: () -> Unit) {
         val id = planId ?: return
         viewModelScope.launch { db.planDao().delete(id); onDone() }
+    }
+
+    /** The note split into separate items on the same day; this item's other edits are saved first unless it goes. */
+    fun split(items: List<PlanItem>, deleteOriginal: Boolean, onDone: () -> Unit) {
+        val current = item ?: return
+        val shared = trip?.readOnly == true
+        viewModelScope.launch {
+            db.planDao().insertAll(items.map { it.copy(pending = it.pending || shared) })
+            val id = planId
+            if (id != null) {
+                if (deleteOriginal) db.planDao().delete(id) else db.planDao().update(current.copy(title = current.title.trim()))
+            }
+            onDone()
+        }
     }
 }
 
