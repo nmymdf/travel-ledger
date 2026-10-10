@@ -67,4 +67,23 @@ class PlanParserTest {
         assertEquals(8 * 60, PlanParser.findTime("飯店早餐"))
         assertEquals(null, PlanParser.findTime("景福宮"))
     }
+
+    @Test fun whatTheNoteSaysWins() {
+        val items = PlanParser.splitNote(
+            """
+            11:40～【交通】:搭乘 01A 循環公車下山直達「南大門市場」站(約 20 分鐘)。
+            12:10 南大門市場 逛街
+            [吃] 明洞餃子
+            住宿:樂天飯店
+            🛍 樂天免稅店
+            步行前往 景福宮
+            """.trimIndent(),
+        )
+        assertEquals(
+            listOf("搭乘 01A 循環公車下山直達「南大門市場」站(約 20 分鐘)", "南大門市場 逛街", "明洞餃子", "樂天飯店", "🛍 樂天免稅店", "步行前往 景福宮"),
+            items.map { it.title },
+        )
+        assertEquals(listOf("交通", "購物", "吃", "住宿", "購物", "交通"), items.map { it.categoryHint })
+        assertEquals(11 * 60 + 40, items[0].minuteOfDay)
+    }
 }

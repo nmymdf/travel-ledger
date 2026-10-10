@@ -98,7 +98,7 @@ fun TripScreen(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             Row(
-                Modifier.fillMaxWidth().statusBarsPadding().height(64.dp).padding(start = 12.dp, end = 4.dp),
+                Modifier.fillMaxWidth().statusBarsPadding().heightIn(min = 64.dp).padding(start = 12.dp, end = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Row(
@@ -183,7 +183,7 @@ private fun TripBottomBar(current: TripTab, onTab: (TripTab) -> Unit, onAdd: () 
     Box(Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().align(Alignment.BottomCenter).background(cs.surfaceContainerLowest)) {
             HorizontalDivider(color = ledger.hairline)
-            Row(Modifier.fillMaxWidth().navigationBarsPadding().height(66.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().navigationBarsPadding().heightIn(min = 66.dp), verticalAlignment = Alignment.CenterVertically) {
                 listOf(TripTab.TODAY, TripTab.PLAN).forEach { TabItem(it, it == current, Modifier.weight(1f)) { onTab(it) } }
                 Spacer(Modifier.weight(1f))
                 listOf(TripTab.LEDGER, TripTab.STATS).forEach { TabItem(it, it == current, Modifier.weight(1f)) { onTab(it) } }
@@ -212,7 +212,7 @@ private fun TabItem(tab: TripTab, selected: Boolean, modifier: Modifier, onClick
         TripTab.STATS -> Icons.Rounded.PieChart
     }
     Column(
-        modifier.fillMaxHeight().clickable(onClick = onClick),
+        modifier.heightIn(min = 66.dp).clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
     ) {
         Box(
@@ -426,7 +426,7 @@ fun CurrencyBadge(code: String, size: androidx.compose.ui.unit.Dp = 42.dp) {
         // Sized from the badge, not the font setting, so a three-letter code always fits on one line.
         val fontSize = with(androidx.compose.ui.platform.LocalDensity.current) { (size * 0.3f).toSp() }
         Text(
-            code, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontSize = fontSize),
+            code, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontSize = fontSize, lineHeight = androidx.compose.ui.unit.TextUnit(1.1f, androidx.compose.ui.unit.TextUnitType.Em)),
             color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 1, softWrap = false,
         )
     }

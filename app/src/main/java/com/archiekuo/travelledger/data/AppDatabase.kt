@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Trip::class, TripCurrencyRate::class, Member::class, Category::class,
         PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class, PlanItem::class, DayNote::class,
     ],
-    version = 8,
+    version = 9,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
@@ -98,7 +98,14 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
+        /** v9: which map app a trip navigates with. */
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE trip ADD COLUMN navApp TEXT")
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
 
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "travel-ledger.db").setup().build()

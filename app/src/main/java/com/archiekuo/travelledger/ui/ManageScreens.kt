@@ -53,7 +53,7 @@ fun ManageListScreen(
             AppTopBar(title, onBack = onBack, actions = {
                 Button(
                     { adding = true }, shape = RoundedCornerShape(50),
-                    contentPadding = PaddingValues(horizontal = 14.dp), modifier = Modifier.padding(end = 8.dp).height(38.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp), modifier = Modifier.padding(end = 8.dp).heightIn(min = 38.dp),
                 ) {
                     Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))

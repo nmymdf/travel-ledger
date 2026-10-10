@@ -15,6 +15,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import com.archiekuo.travelledger.data.Category
 import com.archiekuo.travelledger.data.ExpenseRow
 import com.archiekuo.travelledger.data.HOME_CURRENCY
@@ -230,7 +232,7 @@ fun PlanViewScreen(
                     LinkText(p.note)
                     if (canEdit && p.note.lines().count { it.isNotBlank() } >= 2) {
                         Spacer(Modifier.height(10.dp))
-                        OutlinedButton({ splitting = true }, Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(14.dp)) {
+                        OutlinedButton({ splitting = true }, Modifier.fillMaxWidth().heightIn(min = 46.dp), shape = RoundedCornerShape(14.dp)) {
                             Icon(Icons.Rounded.CallSplit, null)
                             Spacer(Modifier.width(6.dp))
                             Text("把筆記拆成多個行程")
@@ -249,26 +251,34 @@ fun PlanViewScreen(
                 }
             }
 
-            Button(actions.record, Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
+            Button(actions.record, Modifier.fillMaxWidth().heightIn(min = 52.dp), shape = RoundedCornerShape(14.dp)) {
                 Icon(Icons.Rounded.AddCard, null)
                 Spacer(Modifier.width(8.dp))
                 Text("為這個行程記一筆")
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (canEdit) {
-                    FilledTonalButton(
-                        { actions.setStatus(if (done) PlanStatus.TODO else PlanStatus.DONE) },
-                        Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(14.dp),
-                    ) {
-                        Icon(if (done) Icons.Rounded.Undo else Icons.Rounded.CheckCircle, null)
+            // Side by side when both labels fit; stacked when the text is large.
+            val statusLabel = if (done) "改回未去" else "標記已去"
+            val buttons = buildList {
+                if (canEdit) add(Triple(statusLabel, if (done) Icons.Rounded.Undo else Icons.Rounded.CheckCircle) { actions.setStatus(if (done) PlanStatus.TODO else PlanStatus.DONE) })
+                add(Triple("導航", Icons.Rounded.Directions) { actions.openMap(p) })
+            }
+            val measurer = rememberTextMeasurer()
+            val labelStyle = MaterialTheme.typography.labelLarge
+            val density = LocalDensity.current
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val widest = buttons.maxOf { with(density) { measurer.measure(it.first, labelStyle).size.width.toDp() } } + 24.dp + 6.dp + 48.dp
+                val sideBySide = widest * buttons.size + 10.dp * (buttons.size - 1) <= maxWidth
+                val button: @Composable (Triple<String, ImageVector, () -> Unit>, Modifier) -> Unit = { (label, icon, onClick), m ->
+                    FilledTonalButton(onClick, m.heightIn(min = 50.dp), shape = RoundedCornerShape(14.dp)) {
+                        Icon(icon, null)
                         Spacer(Modifier.width(6.dp))
-                        Text(if (done) "改回未去" else "標記已去", softWrap = false)
+                        Text(label, softWrap = false)
                     }
                 }
-                FilledTonalButton({ actions.openMap(p) }, Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(14.dp)) {
-                    Icon(Icons.Rounded.Directions, null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("導航", softWrap = false)
+                if (sideBySide) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { buttons.forEach { button(it, Modifier.weight(1f)) } }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { buttons.forEach { button(it, Modifier.fillMaxWidth()) } }
                 }
             }
         }

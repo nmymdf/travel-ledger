@@ -59,12 +59,8 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
         }
     }
 
-    fun openMap(title: String, location: String) {
-        val uri = if (location.startsWith("http")) android.net.Uri.parse(location)
-        else android.net.Uri.parse("geo:0,0?q=" + android.net.Uri.encode(listOf(title, location).filter { it.isNotBlank() }.joinToString(" ")))
-        runCatching { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri)) }
-            .onFailure { android.widget.Toast.makeText(context, "找不到地圖 App", android.widget.Toast.LENGTH_SHORT).show() }
-    }
+    /** Navigate with the trip's chosen map app. */
+    fun openMap(trip: Trip?, title: String, location: String) = MapLauncher.open(context, NavApp.of(trip?.navApp), title, location)
 
     ImportHost(db) { id ->
         if (id != null) nav.navigate("trip/$id") { popUpTo("trips") }
@@ -138,7 +134,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     setPlanStatus = { pid, st -> vm.setPlanStatus(pid, st) },
                     movePlans = { ids, date -> vm.movePlans(ids, date) },
                     pastePlans = { text, date -> vm.addParsed(com.archiekuo.travelledger.logic.PlanParser.splitNote(text), date) },
-                    openMap = { p -> openMap(p.title, p.location) },
+                    openMap = { p -> openMap(trip, p.title, p.location) },
                     share = { sharing = true },
                     readOnly = readOnly,
                     pendingCount = pendingCount,
@@ -232,7 +228,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     delete = { vm.delete { nav.popBackStack() } },
                     back = { nav.popBackStack() },
                     record = { pid?.let { p -> nav.navigate("trip/$id/expense/0?plan=$p") } },
-                    openMap = { p -> openMap(p.title, p.location) },
+                    openMap = { p -> openMap(vm.trip, p.title, p.location) },
                 ),
             )
         }
@@ -255,7 +251,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     delete = { vm.delete { nav.popBackStack() } },
                     setStatus = { st -> vm.setStatus(st) },
                     record = { nav.navigate("trip/$id/expense/0?plan=$pid") },
-                    openMap = { p -> openMap(p.title, p.location) },
+                    openMap = { p -> openMap(trip, p.title, p.location) },
                     openExpense = { eid -> nav.navigate("trip/$id/expense/$eid") },
                     split = { items ->
                         vm.split(items) { undo ->

@@ -31,6 +31,8 @@ data class Trip(
     val sharedBy: String? = null,
     /** When the shared copy was made (epoch millis). */
     val sharedAt: Long? = null,
+    /** Map app for 導航 on this trip ("google", "naver", "kakao"); null asks each time. */
+    val navApp: String? = null,
 ) {
     val readOnly: Boolean get() = sharedBy != null
 }

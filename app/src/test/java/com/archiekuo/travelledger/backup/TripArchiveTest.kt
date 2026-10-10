@@ -63,7 +63,7 @@ class TripArchiveTest {
     private fun kyoto(): Long = runBlocking {
         val onsen = organizer.lookupDao().insertCategory(Category(name = "溫泉", sortOrder = 9, icon = "spa", color = 4))
         val trip = organizer.tripDao().createTrip(
-            Trip(name = "京都賞楓", startDate = 20400, endDate = 20404, budget = 50000.0, coverTheme = "AUTUMN"),
+            Trip(name = "京都賞楓", startDate = 20400, endDate = 20404, budget = 50000.0, coverTheme = "AUTUMN", navApp = "google"),
             listOf("我", "小美"), listOf(TripCurrencyRate(0, "JPY", 0.215)),
         )
         val dinner = organizer.planDao().insert(
@@ -129,6 +129,7 @@ class TripArchiveTest {
         assertEquals(organizer.tripDao().getTrip(trip)!!.uuid, copy.uuid)
         assertEquals(50000.0, copy.budget!!, 0.0)
         assertEquals("AUTUMN", copy.coverTheme)
+        assertEquals("google", copy.navApp)
         assertEquals(listOf("我", "小美"), companion.tripDao().getMembers(id).map { it.name })
         assertEquals(0.215, companion.tripDao().getRates(id).single().rate, 0.0)
         assertEquals("【第二天行程】\n08:00 瓢亭", companion.dayNoteDao().get(id, 20401)!!.text)

@@ -205,7 +205,7 @@ private fun NameRow(s: EditState, suggestions: List<TitleSuggestion>, actions: E
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val shape = RoundedCornerShape(16.dp)
         Row(
-            Modifier.fillMaxWidth().height(56.dp).clip(shape).background(cs.surfaceContainerLowest)
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(shape).background(cs.surfaceContainerLowest)
                 .border(if (focused) 1.5.dp else 1.dp, if (focused) cs.primary else ledger.hairline, shape)
                 .padding(start = 14.dp, end = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -275,7 +275,7 @@ private fun PhotoButton(label: String, icon: androidx.compose.ui.graphics.vector
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(14.dp)
     Row(
-        modifier.height(46.dp).clip(shape).background(if (enabled) cs.primaryContainer else cs.surfaceVariant)
+        modifier.heightIn(min = 46.dp).clip(shape).background(if (enabled) cs.primaryContainer else cs.surfaceVariant)
             .clickable(enabled = enabled, onClick = onClick),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -374,7 +374,7 @@ private fun PaymentRow(methods: List<PaymentMethod>, selected: Long?, onSelect: 
         val on = m.id == selected
         val shape = RoundedCornerShape(14.dp)
         Row(
-            modifier.height(46.dp).clip(shape)
+            modifier.heightIn(min = 46.dp).clip(shape)
                 .background(if (on) cs.primaryContainer else cs.surfaceContainerLowest)
                 .border(if (on) 1.5.dp else 1.dp, if (on) cs.primary else ledger.hairline, shape)
                 .clickable { onSelect(m.id) }.padding(horizontal = 8.dp),

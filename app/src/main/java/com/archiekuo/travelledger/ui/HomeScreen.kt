@@ -222,14 +222,16 @@ private fun FeaturedTripCard(t: TripSummary, today: LocalDate, onClick: () -> Un
                 BudgetBar(f)
                 Spacer(Modifier.height(2.dp))
             }
-            Row(verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) {
+            // Spent and budget share a line when they fit; with large text the budget moves underneath.
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.padding(end = 12.dp)) {
                     Text("已花費", style = CaptionStyle, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(fmtMoney(t.totalHome), style = MaterialTheme.typography.titleLarge)
+                    Text(fmtMoney(t.totalHome), style = MaterialTheme.typography.titleLarge, softWrap = false)
                 }
                 if (budget != null) {
                     val f = t.totalHome / budget
-                    Column(horizontalAlignment = Alignment.End) {
+                    Column(horizontalAlignment = Alignment.End, modifier = Modifier.align(Alignment.Bottom)) {
                         Text("${Math.round(f * 100)}%", style = MaterialTheme.typography.titleSmall, color = budgetColor(f))
                         Text("預算 ${fmtMoney(budget)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

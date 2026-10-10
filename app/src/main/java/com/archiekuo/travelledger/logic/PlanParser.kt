@@ -23,7 +23,35 @@ object PlanParser {
         ),
     )
 
-    fun guessCategory(text: String): String? = hints.firstOrNull { (_, words) -> words.any { text.contains(it) } }?.first
+    // What the writer said it is: 【交通】, [吃], (住宿), "購物:" at the start, or a leading emoji.
+    private val tagNames = mapOf(
+        "交通" to "交通", "移動" to "交通", "吃" to "吃", "餐" to "吃", "美食" to "吃", "餐廳" to "吃", "早餐" to "吃", "午餐" to "吃", "晚餐" to "吃",
+        "住宿" to "住宿", "住" to "住宿", "飯店" to "住宿", "購物" to "購物", "買" to "購物", "逛街" to "購物", "景點" to "景點", "玩" to "景點", "參觀" to "景點",
+    )
+    private val bracketTag = Regex("""[【\[(（〔]\s*([^】\])）〕]{1,4})\s*[】\])）〕]\s*[:：]?""")
+    private val prefixTag = Regex("""^\s*(交通|移動|住宿|購物|景點|美食|餐廳|早餐|午餐|晚餐)\s*[:：]""")
+    private val emojiTags = listOf(
+        "交通" to listOf("🚇", "🚌", "🚕", "🚆", "🚄", "✈", "🚶", "🚗", "🚉"),
+        "吃" to listOf("🍜", "🍣", "🍖", "🍗", "🍲", "🍚", "☕", "🍰", "🍺", "🍴", "🍽"),
+        "住宿" to listOf("🏨", "🛏"),
+        "購物" to listOf("🛍", "🛒"),
+        "景點" to listOf("📷", "📸", "🏯", "⛩", "🏞"),
+    )
+    // Getting somewhere: "搭乘 01A 公車到南大門市場站" is transport even though it names a market.
+    private val travelVerbs = Regex("""^(?:搭乘|搭|坐|轉乘|轉搭|步行|走路|前往|移動|開車|騎)|(?:搭乘|轉乘|步行約|走路約|車程|下車|上車|直達)""")
+
+    /** The category the text names itself (tag, prefix or emoji), and the text without that marker. */
+    fun explicitCategory(text: String): Pair<String, String>? {
+        bracketTag.find(text)?.let { m -> tagNames[m.groupValues[1].trim()]?.let { return it to text.removeRange(m.range).trim() } }
+        prefixTag.find(text)?.let { m -> tagNames[m.groupValues[1]]?.let { return it to text.removeRange(m.range).trim() } }
+        emojiTags.firstOrNull { (_, marks) -> marks.any { text.contains(it) } }?.let { (cat, _) -> return cat to text }
+        return null
+    }
+
+    fun guessCategory(text: String): String? =
+        explicitCategory(text)?.first
+            ?: "交通".takeIf { travelVerbs.containsMatchIn(text.trim()) }
+            ?: hints.firstOrNull { (_, words) -> words.any { text.contains(it) } }?.first
 
     /** One place per non-empty line; bullets and numbering are stripped, URLs become the location. */
     fun parseLines(text: String): List<ParsedPlace> = text.lines().mapNotNull { raw ->
@@ -90,9 +118,11 @@ object PlanParser {
                     .replace(clock, " ").replace(hourWord, " ")
                     .replace(Regex("""^\s*(?:[-*•・●○◎▶►✓✔☐□]|\d{1,3}[.、)):]|[(\(]\d{1,3}[)\)])\s*"""), "")
                     .let { t -> periods.fold(t) { acc, (w, _) -> if (w == "早餐" || w == "午餐" || w == "晚餐" || w == "下午茶" || w == "宵夜") acc else acc.replace(w, " ") } }
-                    .replace(Regex("""\s+"""), " ").trim().trim('-', '—', ':', '：', ',', '，', '、', ' ')
-                if (title.isEmpty()) return@forEachIndexed
-                out += ParsedPlace(title, if (i == 0) lineUrl ?: "" else "", guessCategory(title) ?: guessCategory(step), time)
+                    .replace(Regex("""\s+"""), " ").trim().trim('-', '—', ':', '：', ',', '，', '、', '～', '~', '。', ' ')
+                val tagged = explicitCategory(title)
+                val clean = (tagged?.second ?: title).trim().trim('-', '—', ':', '：', ',', '，', '、', '～', '~', '。', ' ')
+                if (clean.isEmpty()) return@forEachIndexed
+                out += ParsedPlace(clean, if (i == 0) lineUrl ?: "" else "", tagged?.first ?: guessCategory(clean) ?: guessCategory(step), time)
             }
         }
         return out

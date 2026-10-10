@@ -37,7 +37,7 @@ fun PhotoViewer(
     val pager = rememberPagerState(initialPage = start) { photos.size }
     var saved by remember { mutableStateOf(setOf<Int>()) }
     Column(Modifier.fillMaxSize().background(Color(0xFF0B0B0E)).systemBarsPadding()) {
-        Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClose) { Icon(Icons.Rounded.Close, "關閉", tint = Color.White) }
             Text(
                 "${pager.currentPage + 1} / ${photos.size}", color = Color.White, style = MaterialTheme.typography.titleMedium,
@@ -72,7 +72,7 @@ fun PhotoViewer(
 private fun TypeOption(label: String, icon: ImageVector, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
     Row(
-        modifier.height(50.dp).clip(shape)
+        modifier.heightIn(min = 50.dp).clip(shape)
             .background(if (selected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.10f))
             .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically,

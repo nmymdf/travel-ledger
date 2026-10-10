@@ -106,6 +106,7 @@ object TripArchive {
                 put("splitEnabled", trip.splitEnabled)
                 put("createdAt", trip.createdAt)
                 putOpt("coverTheme", trip.coverTheme)
+                putOpt("navApp", trip.navApp)
                 putOpt("cover", attach(trip.coverPath, "covers"))
                 // A backup remembers which trips were someone else's; a share names the sender.
                 putOpt("sharedBy", if (kind == KIND_TRIP) trip.sharedBy ?: sharedBy else trip.sharedBy)
@@ -339,6 +340,7 @@ object TripArchive {
                         createdAt = t.optLong("createdAt", System.currentTimeMillis()),
                         coverPath = copied[t.optStringOrNull("cover")],
                         coverTheme = t.optStringOrNull("coverTheme"),
+                        navApp = t.optStringOrNull("navApp"),
                         uuid = uuid,
                         sharedBy = sharedBy,
                         sharedAt = if (sharedBy != null) t.optLongOrNull("sharedAt") ?: manifest.optLong("exportedAt") else null,

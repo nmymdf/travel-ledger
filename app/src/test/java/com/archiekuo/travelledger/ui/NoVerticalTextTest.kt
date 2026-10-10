@@ -36,7 +36,7 @@ import java.time.LocalDate
  * (like "2026/10/2" / "2 –" or "K" / "R" / "W").
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "w360dp-h2400dp-xxhdpi", fontScale = 1.3f)
+@Config(qualifiers = "w360dp-h2400dp-xxhdpi", fontScale = 1.5f)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class NoVerticalTextTest {
     @get:Rule val rule = createComposeRule()
@@ -96,6 +96,12 @@ class NoVerticalTextTest {
         "編輯行程" to { PlanEditScreen(item, trip, categories, false, PlanActions()) },
         "行程明細" to { PlanViewScreen(item, shared, categories, expenses.take(2), canEdit = false, PlanViewActions()) },
         "行程內容" to { PlanViewScreen(item, trip, categories, expenses.take(2), canEdit = true, PlanViewActions()) },
+        "行程內容(長名稱)" to {
+            PlanViewScreen(
+                item.copy(title = "【交通】:搭乘 01A 循環公車下山直達「南大門市場」站(約 20 分鐘)。", note = "", reservation = Reservation.NONE),
+                trip, categories, emptyList(), canEdit = true, PlanViewActions(),
+            )
+        },
         "行程(當日筆記)" to {
             TripScreen(
                 trip, 4, expenses, plans, TripTab.PLAN, {},
@@ -151,6 +157,10 @@ private fun Char.wordy() = isLetterOrDigit() && code < 0x2E80 || this in "/.:,$%
 
 private fun problems(where: String, r: TextLayoutResult): List<String> {
     val text = r.layoutInput.text.text
+    // Squeezed into a box shorter than its lines (like a fixed-height button): the tops or bottoms get cut.
+    if (r.size.height + 1 < r.multiParagraph.height) {
+        return listOf("$where:「$text」被切到(高 ${r.size.height} < 需要 ${r.multiParagraph.height.toInt()})")
+    }
     if (r.lineCount < 2) return emptyList()
     val lines = (0 until r.lineCount).map { i -> text.substring(r.getLineStart(i), r.getLineEnd(i, visibleEnd = true)).trim() }
     val out = mutableListOf<String>()
@@ -175,7 +185,7 @@ private fun problems(where: String, r: TextLayoutResult): List<String> {
  * A text field inside a dialog never settles at high density under Robolectric, so no density qualifier here.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(fontScale = 1.3f)
+@Config(fontScale = 1.5f)
 class NoVerticalTextDialogTest {
     @get:Rule val rule = createComposeRule()
     private val name = "2026首爾賞楓五天四夜自由行"

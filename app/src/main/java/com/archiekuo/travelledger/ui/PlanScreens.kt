@@ -215,7 +215,7 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
                 IconButton({ pasting = true }) { Icon(Icons.Rounded.ContentPaste, "貼上多筆") }
                 Button(
                     { actions.addPlan(null) }, shape = RoundedCornerShape(50),
-                    contentPadding = PaddingValues(horizontal = 14.dp), modifier = Modifier.height(40.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp), modifier = Modifier.heightIn(min = 40.dp),
                 ) {
                     Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
@@ -272,9 +272,16 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
                 val rows = plans.filter { it.date == day }
                 item(key = "d$day") {
                     Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("Day ${day - trip.startDate + 1}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-                        Text("  ${fmtShortDate(day)}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                        if (!actions.readOnly && actions.dayNotes[day] == null) SmallAdd("筆記", Icons.Rounded.EditNote) { actions.editDayNote(day) }
+                        Text("Day ${day - trip.startDate + 1}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, softWrap = false)
+                        Text(
+                            "  ${fmtShortDate(day)}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f),
+                            maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
+                        )
+                        if (!actions.readOnly && actions.dayNotes[day] == null) {
+                            IconButton({ actions.editDayNote(day) }, Modifier.size(40.dp)) {
+                                Icon(Icons.Rounded.EditNote, "寫當日筆記", tint = MaterialTheme.colorScheme.primary)
+                            }
+                        }
                         SmallAdd("加入") { actions.addPlan(day) }
                     }
                 }
@@ -747,7 +754,7 @@ fun TitleField(value: String, placeholder: String, onChange: (String) -> Unit) {
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(16.dp)
     Row(
-        Modifier.fillMaxWidth().height(56.dp).clip(shape).background(cs.surfaceContainerLowest)
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(shape).background(cs.surfaceContainerLowest)
             .border(if (focused) 1.5.dp else 1.dp, if (focused) cs.primary else ledger.hairline, shape)
             .padding(start = 14.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

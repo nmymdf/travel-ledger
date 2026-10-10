@@ -74,6 +74,7 @@ fun TripEditScreen(
     var name by rememberSaveable { mutableStateOf(initial?.name ?: "") }
     var budget by rememberSaveable { mutableStateOf(initial?.budget?.let { fmtNumber(it) } ?: "") }
     var split by rememberSaveable { mutableStateOf(initial?.splitEnabled ?: false) }
+    var navApp by rememberSaveable { mutableStateOf(initial?.navApp) }
     var theme by rememberSaveable { mutableStateOf(initial?.coverTheme) }
     val members = remember { mutableStateListOf<String>().apply { addAll(initialMembers) } }
     val rates = remember { mutableStateListOf<Pair<String, String>>().apply { addAll(initialRates.map { it.currency to fmtNumber(it.rate) }) } }
@@ -87,6 +88,7 @@ fun TripEditScreen(
         val trip = (initial ?: Trip(name = "", startDate = 0, endDate = 0)).copy(
             name = name.trim(), startDate = start, endDate = end,
             budget = budget.toDoubleOrNull()?.takeIf { it > 0 }, splitEnabled = split, coverPath = coverPath, coverTheme = theme,
+            navApp = navApp,
         )
         val r = rates.mapNotNull { (c, v) -> v.toDoubleOrNull()?.takeIf { it > 0 }?.let { TripCurrencyRate(trip.id, c, it) } }
         onSave(trip, members.toList(), r)
@@ -159,6 +161,17 @@ fun TripEditScreen(
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
+
+            SectionHeader("導航軟體")
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SelectPill("每次詢問", navApp == null, { navApp = null })
+                NavApp.entries.forEach { app -> SelectPill(app.label, navApp == app.key, { navApp = app.key }) }
+            }
+            Text(
+                "行程的「導航」會用這個 App。韓國建議 Naver Map 或 KakaoMap,大眾運輸和步行路線比較準。",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
             SectionHeader("預設匯率") {
                 Text("1 外幣 = ? 新台幣", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -241,7 +254,7 @@ private fun CalendarIcon() = Icon(Icons.Rounded.CalendarMonth, null, Modifier.si
 private fun MemberCell(name: String, modifier: Modifier, onRemove: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
     Row(
-        modifier.height(52.dp).clip(shape).background(MaterialTheme.colorScheme.surfaceContainerLowest).border(1.dp, ledger.hairline, shape)
+        modifier.heightIn(min = 52.dp).clip(shape).background(MaterialTheme.colorScheme.surfaceContainerLowest).border(1.dp, ledger.hairline, shape)
             .padding(start = 10.dp, end = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -256,7 +269,7 @@ private fun MemberCell(name: String, modifier: Modifier, onRemove: () -> Unit) {
 private fun AddCell(text: String, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)
     Row(
-        modifier.height(52.dp).clip(shape).background(MaterialTheme.colorScheme.primaryContainer).clickable(onClick = onClick),
+        modifier.heightIn(min = 52.dp).clip(shape).background(MaterialTheme.colorScheme.primaryContainer).clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
     ) {
         Icon(Icons.Rounded.PersonAdd, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)

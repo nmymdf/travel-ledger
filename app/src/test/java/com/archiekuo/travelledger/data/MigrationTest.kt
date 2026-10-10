@@ -35,7 +35,7 @@ class MigrationTest {
             close()
         }
         // Validates each step's resulting schema against the exported schema files.
-        helper.runMigrationsAndValidate(name, 8, true, *AppDatabase.ALL_MIGRATIONS).close()
+        helper.runMigrationsAndValidate(name, 9, true, *AppDatabase.ALL_MIGRATIONS).close()
 
         val db = Room.databaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java, name)
             .addMigrations(*AppDatabase.ALL_MIGRATIONS).allowMainThreadQueries().build()
@@ -54,6 +54,7 @@ class MigrationTest {
             assertNull(trip.coverTheme)
             assertEquals(32, trip.uuid.length) // every old trip gets its own identity for sharing
             assertNull(trip.sharedBy)
+            assertNull(trip.navApp)
             assertEquals(40000.0, trip.budget!!, 0.0)
             assertEquals(listOf("我"), db.tripDao().getMembers(1).map { it.name })
             assertEquals(0, db.planDao().observeRows(1).first().size)
@@ -74,6 +75,7 @@ class MigrationTest {
         helper.runMigrationsAndValidate(name, 6, true, AppDatabase.MIGRATION_5_6).close()
         helper.runMigrationsAndValidate(name, 7, true, AppDatabase.MIGRATION_6_7).close()
         helper.runMigrationsAndValidate(name, 8, true, AppDatabase.MIGRATION_7_8).close()
+        helper.runMigrationsAndValidate(name, 9, true, AppDatabase.MIGRATION_8_9).close()
     }
 
     @Test fun v6GivesEachTripADifferentUuid() {

@@ -137,7 +137,7 @@ private fun OptionCard(
     val cs = MaterialTheme.colorScheme
     val shape = RoundedCornerShape(16.dp)
     Column(
-        modifier.height(80.dp).clip(shape)
+        modifier.heightIn(min = 80.dp).clip(shape)
             .background(if (selected) cs.primaryContainer else cs.surfaceContainerLowest)
             .border(if (selected) 1.5.dp else 1.dp, if (selected) cs.primary else ledger.hairline, shape)
             .clickable(onClick = onClick),

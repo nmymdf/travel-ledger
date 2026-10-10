@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 
 /** Flat top bar on the page background: back/close, title + optional subtitle, actions. */
@@ -147,7 +148,7 @@ fun PillButton(
     height: Dp = 52.dp,
 ) {
     Button(
-        onClick, modifier.fillMaxWidth().height(height), enabled = enabled,
+        onClick, modifier.fillMaxWidth().heightIn(min = height), enabled = enabled,
         shape = RoundedCornerShape(16.dp),
         elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp),
     ) {
@@ -190,7 +191,9 @@ fun Avatar(name: String, size: Dp = 32.dp) {
         Modifier.size(size).clip(CircleShape).background(c.copy(alpha = if (ledger.dark) 0.3f else 0.16f)),
         contentAlignment = Alignment.Center,
     ) {
-        Text(name.take(1), color = c, fontWeight = FontWeight.Bold, fontSize = (size.value * 0.42f).sp)
+        // Sized from the circle, not the font setting, so the initial always fits inside it.
+        Text(name.take(1), color = c, fontWeight = FontWeight.Bold, fontSize = with(androidx.compose.ui.platform.LocalDensity.current) { (size * 0.42f).toSp() }, maxLines = 1, softWrap = false,
+            lineHeight = 1.1.em)
     }
 }
 
