@@ -47,8 +47,8 @@ class PlanEditorInputTest {
         val (_, fullName) = lineHeightAndBoxHeight(0)
         assertTrue("two-line name shows both lines ($fullName vs line $nameLine)", fullName >= nameLine * 2 - 1)
 
-        // The note comes right after the name and category, with room for two lines.
-        val noteIndex = 1
+        // The note is the last field, with room for two lines.
+        val noteIndex = rule.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().lastIndex
         val (noteLine, noteBox) = lineHeightAndBoxHeight(noteIndex)
         assertTrue("note box shows 2 lines ($noteBox vs line $noteLine)", noteBox >= noteLine * 2 - 1)
         rule.onAllNodes(hasSetTextAction())[noteIndex].performTextInput("必點綠豆煎餅\n營業到 23:00\n記得帶現金")

@@ -486,11 +486,6 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
         ) {
             TitleField(p.title, "景點、餐廳或活動名稱") { v -> actions.edit { it.copy(title = v) } }
             CategoryRow(categories, p.categoryId) { id -> actions.edit { it.copy(categoryId = id) } }
-            // The note sits right under the name: it is what gets written most.
-            FieldBox("筆記") {
-                LinkAwareInput(p.note, { v -> actions.edit { it.copy(note = v) } }, "必點菜色、營業時間、注意事項…", singleLine = false, minLines = 2)
-            }
-            LinkButtons(p.note)
 
             SectionHeader("哪一天") {
                 SmallAdd(p.minuteOfDay?.let { "時間 ${fmtTime(it)}" } ?: "加時間", Icons.Rounded.Schedule) { pickTime = true }
@@ -527,6 +522,11 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                 },
             ) { LinkAwareInput(p.location, { v -> actions.edit { it.copy(location = v) } }, "地址或 Google 地圖連結", singleLine = false) }
             LinkButtons(p.location)
+
+            FieldBox("筆記") {
+                LinkAwareInput(p.note, { v -> actions.edit { it.copy(note = v) } }, "必點菜色、營業時間、注意事項…", singleLine = false, minLines = 2)
+            }
+            LinkButtons(p.note)
 
 
         }
