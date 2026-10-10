@@ -5,7 +5,7 @@
 
 ## 1. 專案定位
 
-- 個人自用的 Android 旅遊記帳 App,**不上架、不做 iOS**。
+- 個人自用的 Android 旅遊記帳 App,**不上架**。iPhone 版由家人另外在 Mac 上移植(見 `docs/IOS_PORT.md`),檔案格式共用。
 - 技術:**Kotlin + Jetpack Compose + Room**(單 Activity、MVVM、Material 3)。
 - 資料全部存手機本機,**離線優先,不做雲端同步、不做多人共同記帳**。
 - 目標是精緻、順手:旅途中記一筆要在三步內完成。
@@ -201,6 +201,12 @@
 - 排行程:每天一欄+待排、拖曳換天、欄位輸入或貼上多行(與手機同一套拆分與分類規則,`desktop/test/parser-cases.json` 兩邊共用測試)、拖入 Google 地圖連結、Ctrl+V/拖入截圖、編輯區。
 - 交換:手機「傳到電腦排行程」(kind=trip)→ 桌面「打開手機檔案」;桌面「傳到手機」產生 kind=plans 檔(trip、plans 含 uuid 與截圖、deleted、dayNotes)→ 手機確認後「併入」:同 uuid 更新、新增、刪除、當日筆記覆寫,帳目不動;沒有的旅程自動新建;別人分享的旅程拒絕。
 - 行程截圖:資料庫 v10 `plan_photo`;分享與備份一律帶上(壓縮 1600px);拆分筆記時移到第一個新行程,復原時移回。
+
+## 13.8 iPhone 版移植準備
+
+- `docs/IOS_PORT.md`:給 iPhone 那邊 Claude 的交接文件(資料模型、檔案格式與匯入規則、要照搬的邏輯、開發順序、介面規則)。
+- `docs/iPhone版_給家人的步驟.md`:第一次做的人看的操作步驟(Xcode、Claude Code、GitHub、TestFlight)。
+- `compat/`:Android 與電腦行程桌寫出的範例檔(`fixtures/`)給 iPhone 版驗證;iPhone 寫出的檔放 `from-ios/`,由 `CompatFixturesTest` 在 Android 端驗證。
 
 ## 14. 之後可能做(尚未決定)
 
