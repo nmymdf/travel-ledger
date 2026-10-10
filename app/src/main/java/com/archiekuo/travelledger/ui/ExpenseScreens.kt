@@ -406,7 +406,7 @@ private fun NoteField(s: EditState, actions: ExpenseActions) {
             Text("加備註", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
         }
     } else {
-        FieldBox("備註") { LinkAwareInput(s.note, { v -> actions.edit { it.copy(note = v) } }, "例如:點了特製拉麵", singleLine = false, minLines = 2) }
+        FieldBox("備註") { LinkAwareInput(s.note, { v -> actions.edit { it.copy(note = v) } }, "例如:點了特製拉麵", singleLine = false) }
         LinkButtons(s.note)
     }
 }

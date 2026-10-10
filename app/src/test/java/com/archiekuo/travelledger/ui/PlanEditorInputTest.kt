@@ -20,7 +20,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/** Plan names and notes take several lines: Enter starts a new line, and the boxes show room for 2–3 lines. */
+/** Plan names and notes take several lines: Enter starts a new line; the note leaves room for two lines, the name grows to two. */
 @RunWith(RobolectricTestRunner::class)
 @Config(qualifiers = "w411dp-h1600dp")
 class PlanEditorInputTest {
@@ -39,16 +39,18 @@ class PlanEditorInputTest {
         rule.setContent {
             AppTheme { PlanEditScreen(item, Trip(1, "首爾", 19884, 19889), listOf(Category(1, "吃", 0)), true, PlanActions(edit = { f -> item = f(item) })) }
         }
-        // Empty boxes already leave room: the name two lines, the note three.
-        val (nameLine, nameBox) = lineHeightAndBoxHeight(0)
-        assertTrue("name box shows 2 lines ($nameBox vs line $nameLine)", nameBox >= nameLine * 2 - 1)
-
+        // An empty name is one line; it grows to two as text is added.
+        val (nameLine, emptyName) = lineHeightAndBoxHeight(0)
+        assertTrue("empty name is one line ($emptyName vs line $nameLine)", emptyName < nameLine * 2)
         rule.onAllNodes(hasSetTextAction())[0].performTextInput("【交通】搭乘 01A 循環公車\n下山直達南大門市場站")
         assertEquals("【交通】搭乘 01A 循環公車\n下山直達南大門市場站", item.title)
+        val (_, fullName) = lineHeightAndBoxHeight(0)
+        assertTrue("two-line name shows both lines ($fullName vs line $nameLine)", fullName >= nameLine * 2 - 1)
 
-        val noteIndex = rule.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().lastIndex
+        // The note comes right after the name and category, with room for two lines.
+        val noteIndex = 1
         val (noteLine, noteBox) = lineHeightAndBoxHeight(noteIndex)
-        assertTrue("note box shows 3 lines ($noteBox vs line $noteLine)", noteBox >= noteLine * 3 - 1)
+        assertTrue("note box shows 2 lines ($noteBox vs line $noteLine)", noteBox >= noteLine * 2 - 1)
         rule.onAllNodes(hasSetTextAction())[noteIndex].performTextInput("必點綠豆煎餅\n營業到 23:00\n記得帶現金")
         assertEquals("必點綠豆煎餅\n營業到 23:00\n記得帶現金", item.note)
     }

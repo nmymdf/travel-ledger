@@ -216,7 +216,6 @@ fun PlanViewScreen(
                     Reservation.BOOKED -> add(Triple(Icons.Rounded.EventSeat, "訂位", "已訂好" + p.reservationNote.let { if (it.isBlank()) "" else "\n$it" }))
                 }
                 if (p.location.isNotBlank()) add(Triple(Icons.Rounded.Place, "地點", p.location))
-                p.estCost?.let { add(Triple(Icons.Rounded.Payments, "預估", fmtMoney(it))) }
                 if (spent > 0) add(Triple(Icons.Rounded.ReceiptLong, "已花", fmtMoney(spent)))
             }
             if (lines.isNotEmpty()) DetailCard(lines)
