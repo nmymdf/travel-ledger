@@ -7,6 +7,7 @@ import com.archiekuo.travelledger.ui.EditState
 import com.archiekuo.travelledger.ui.ExpenseEditViewModel
 import com.archiekuo.travelledger.ui.LookupViewModel
 import com.archiekuo.travelledger.ui.PlanEditViewModel
+import com.archiekuo.travelledger.ui.splitPlan
 import com.archiekuo.travelledger.ui.TripDetailViewModel
 import com.archiekuo.travelledger.ui.TripListViewModel
 import com.archiekuo.travelledger.ui.currentTrip
@@ -249,18 +250,25 @@ class LedgerFlowTest {
         val dayNote = runBlocking {
             db.planDao().insert(PlanItem(tripId = trip, title = "第三天行程", date = d(6, 12), note = "09:00 淺草寺\n中午 一蘭拉麵 本店\n晚上 新宿王子飯店 check-in"))
         }
-        val editor = PlanEditViewModel(db, trip, dayNote, null, null)
-        runBlocking { snapshotFlow { editor.item }.first { it != null } }
-        val parsed = PlanParser.splitNote(editor.item!!.note)
+        val original = runBlocking { db.planDao().get(dayNote)!! }
+        val parsed = PlanParser.splitNote(original.note)
         val byName = runBlocking { db.lookupDao().getCategories() }.associateBy { it.name }
-        var done = false
-        editor.split(parsed.map { p -> PlanItem(tripId = trip, title = p.title, date = d(6, 12), minuteOfDay = p.minuteOfDay, categoryId = p.categoryHint?.let { byName[it]?.id }) }, deleteOriginal = true) { done = true }
-        assertTrue(done)
+        val undo = runBlocking {
+            splitPlan(db, original, parsed.map { p -> PlanItem(tripId = trip, title = p.title, date = d(6, 12), minuteOfDay = p.minuteOfDay, categoryId = p.categoryHint?.let { byName[it]?.id }) }, sharedTrip = false)
+        }
         val plans = runBlocking { db.planDao().observeRows(trip).first() }
         assertEquals(listOf("淺草寺", "一蘭拉麵 本店", "新宿王子飯店 check-in"), plans.map { it.title })
         assertEquals(listOf(9 * 60, 12 * 60, 18 * 60), plans.map { it.minuteOfDay })
         assertEquals(listOf("景點", "吃", "住宿"), plans.map { it.categoryName })
         assertTrue(plans.all { it.date == d(6, 12) })
+        // The original note is kept word for word as the day's note, for comparing.
+        assertEquals("【第三天行程】\n09:00 淺草寺\n中午 一蘭拉麵 本店\n晚上 新宿王子飯店 check-in", runBlocking { db.dayNoteDao().get(trip, d(6, 12)) }!!.text)
+
+        // 復原 puts everything back as it was.
+        runBlocking { undo.undo() }
+        val back = runBlocking { db.planDao().observeRows(trip).first() }
+        assertEquals(listOf("第三天行程"), back.map { it.title })
+        assertEquals(null, runBlocking { db.dayNoteDao().get(trip, d(6, 12)) })
     }
 
     @Test fun planningAndRecordingFromThePlan() {

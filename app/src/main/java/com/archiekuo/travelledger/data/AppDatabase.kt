@@ -10,9 +10,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         Trip::class, TripCurrencyRate::class, Member::class, Category::class,
-        PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class, PlanItem::class,
+        PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class, PlanItem::class, DayNote::class,
     ],
-    version = 7,
+    version = 8,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
@@ -20,6 +20,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun lookupDao(): LookupDao
     abstract fun photoDao(): PhotoDao
     abstract fun planDao(): PlanDao
+    abstract fun dayNoteDao(): DayNoteDao
 
     companion object {
         /** v2: trip cover photo, category icon and color. */
@@ -86,7 +87,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+        /** v8: a note for each day of a trip. */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `day_note` (`tripId` INTEGER NOT NULL, `day` INTEGER NOT NULL, `text` TEXT NOT NULL,
+                        `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`tripId`, `day`),
+                        FOREIGN KEY(`tripId`) REFERENCES `trip`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"""
+                )
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
 
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "travel-ledger.db").setup().build()

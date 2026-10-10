@@ -178,9 +178,9 @@ class ScreenSnapshots {
     }
     @Test fun sharedPlanDetail() = paparazzi.snapshot {
         AppTheme(ThemeMode.LIGHT) {
-            PlanDetailScreen(
+            PlanViewScreen(
                 PlanItem(4, 1, "敘敘苑 燒肉", cat("吃"), d(6, 12), 19 * 60, PlanStatus.TODO, Reservation.BOOKED, "19:00 · 4 位 · AB123", "新宿區西新宿 1-26-2", 6000.0, "必點:特選牛舌"),
-                shared, categories, {}, {},
+                shared, categories, emptyList(), canEdit = false, PlanViewActions(),
             )
         }
     }
@@ -254,7 +254,26 @@ class ScreenSnapshots {
             SplitNoteDialog(
                 PlanItem(1, 1, "第三天行程", null, d(6, 12), note = "09:00 淺草寺 → 仲見世通\n中午 一蘭拉麵 本店\n下午3點 晴空塔\nhttps://maps.app.goo.gl/x\n晚上 敘敘苑 燒肉\n記得帶護照"),
                 categories, {},
-            ) { _, _ -> }
+            ) {}
+        }
+    }
+
+    @Test fun planView() = both("planView") {
+        PlanViewScreen(
+            PlanItem(
+                4, 1, "敘敘苑 燒肉", cat("吃"), d(6, 12), 19 * 60, PlanStatus.TODO, Reservation.BOOKED, "19:00 · 4 位 · 電話 03-3343-6091",
+                "https://maps.app.goo.gl/abc", 6000.0, "必點:特選牛舌\n官網 https://www.jojoen.co.jp",
+            ),
+            trip, categories, listOf(expenses[4]), canEdit = true, PlanViewActions(),
+        )
+    }
+    @Test fun planTabNotes() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) {
+            TripScreen(
+                trip, 4, expenses, plans, TripTab.PLAN, {},
+                TripActions(dayNotes = mapOf(d(6, 11) to "【第二天行程】\n08:00 築地場外市場\n中午 壽司大\n記得帶護照", d(6, 12) to "今天早點出門")),
+                today,
+            )
         }
     }
 }

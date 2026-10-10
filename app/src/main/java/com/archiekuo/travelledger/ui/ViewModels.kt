@@ -9,6 +9,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.archiekuo.travelledger.data.AppDatabase
+import com.archiekuo.travelledger.data.UNSCHEDULED_DAY
 import com.archiekuo.travelledger.data.Category
 import com.archiekuo.travelledger.data.Expense
 import com.archiekuo.travelledger.data.ExpenseRow
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
@@ -72,6 +74,12 @@ class TripDetailViewModel(private val db: AppDatabase, private val id: Long) : V
     /** My additions on a shared trip, not yet taken in by its organizer. */
     val pendingCount: StateFlow<Int> = combine(db.tripDao().observePendingExpenses(id), db.tripDao().observePendingPlans(id)) { a, b -> a + b }
         .stateIn(this, 0)
+
+    /** Day notes by epoch day ([UNSCHEDULED_DAY] for the 待排 list). */
+    val dayNotes: StateFlow<Map<Long, String>> = db.dayNoteDao().observe(id).map { list -> list.associate { it.day to it.text } }
+        .stateIn(this, emptyMap())
+
+    fun setDayNote(day: Long, text: String) = viewModelScope.launch { db.dayNoteDao().set(id, day, text) }
 
     fun setPlanStatus(planId: Long, status: String) = viewModelScope.launch { db.planDao().setStatus(planId, status) }
 
@@ -414,23 +422,65 @@ class PlanEditViewModel(
         val id = planId ?: return
         viewModelScope.launch { db.planDao().delete(id); onDone() }
     }
+}
 
-    /** The note split into separate items on the same day; this item's other edits are saved first unless it goes. */
-    fun split(items: List<PlanItem>, deleteOriginal: Boolean, onDone: () -> Unit) {
-        val current = item ?: return
-        val shared = trip?.readOnly == true
+/** A map place shared into the app, waiting to be added to a trip. */
+/** Viewing one plan item: what it is, what was spent on it, and the quick actions around it. */
+class PlanViewModel(private val db: AppDatabase, private val tripId: Long, private val planId: Long) : ViewModel() {
+    val item: StateFlow<PlanItem?> = db.planDao().observe(planId).stateIn(this, null)
+    val trip: StateFlow<Trip?> = db.tripDao().observeTrip(tripId).stateIn(this, null)
+    val categories: StateFlow<List<Category>> = db.lookupDao().observeCategories().stateIn(this, emptyList())
+    val expenses: StateFlow<List<ExpenseRow>> = db.expenseDao().observeRows(tripId)
+        .map { rows -> rows.filter { it.planItemId == planId } }.stateIn(this, emptyList())
+
+    fun setStatus(status: String) = viewModelScope.launch { db.planDao().setStatus(planId, status) }
+
+    fun delete(onDone: () -> Unit) = viewModelScope.launch { db.planDao().delete(planId); onDone() }
+
+    /**
+     * Replaces this item by [items] on the same day. Its note is kept word for word in that day's note (on a
+     * shared trip, where day notes belong to the organizer, the item simply stays). Hands back an undo.
+     */
+    fun split(items: List<PlanItem>, onDone: (PendingUndo) -> Unit) {
+        val original = item.value ?: return
+        val shared = trip.value?.readOnly == true
         viewModelScope.launch {
-            db.planDao().insertAll(items.map { it.copy(pending = it.pending || shared) })
-            val id = planId
-            if (id != null) {
-                if (deleteOriginal) db.planDao().delete(id) else db.planDao().update(current.copy(title = current.title.trim()))
-            }
-            onDone()
+            val undo = splitPlan(db, original, items, shared)
+            onDone(undo)
         }
     }
 }
 
-/** A map place shared into the app, waiting to be added to a trip. */
+/** An action that can be taken back from the snackbar for a short while. */
+class PendingUndo(val message: String, val undo: suspend () -> Unit)
+
+/** The latest undoable action, shown as a snackbar on the trip screen. */
+object UndoInbox {
+    var pending by mutableStateOf<PendingUndo?>(null)
+}
+
+/** See [PlanViewModel.split]; separate so tests can call it directly. */
+suspend fun splitPlan(db: AppDatabase, original: PlanItem, items: List<PlanItem>, sharedTrip: Boolean): PendingUndo {
+    val day = original.date ?: UNSCHEDULED_DAY
+    val noteDao = db.dayNoteDao()
+    val before = noteDao.get(original.tripId, day)
+    val linked = db.expenseDao().forTrip(original.tripId).filter { it.planItemId == original.id }.map { it.id }
+    val created = items.map { db.planDao().insert(it.copy(pending = it.pending || sharedTrip)) }
+    if (!sharedTrip) {
+        val moved = "【${original.title}】\n${original.note.trim()}"
+        noteDao.set(original.tripId, day, listOfNotNull(before?.text, moved).joinToString("\n\n"))
+        db.planDao().delete(original.id)
+    }
+    return PendingUndo("已拆成 ${items.size} 個行程" + if (sharedTrip) "" else ",原筆記放在當日筆記") {
+        created.forEach { db.planDao().deleteRow(it) }
+        if (!sharedTrip) {
+            db.planDao().insert(original)
+            linked.forEach { db.expenseDao().setPlan(it, original.id) }
+            if (before == null) noteDao.delete(original.tripId, day) else noteDao.put(before)
+        }
+    }
+}
+
 object SharedPlaceInbox {
     var pending by mutableStateOf<ParsedPlace?>(null)
 }

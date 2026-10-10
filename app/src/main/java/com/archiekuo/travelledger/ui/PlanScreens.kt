@@ -45,6 +45,7 @@ import com.archiekuo.travelledger.data.PlanRow
 import com.archiekuo.travelledger.data.PlanStatus
 import com.archiekuo.travelledger.data.Reservation
 import com.archiekuo.travelledger.data.Trip
+import com.archiekuo.travelledger.data.UNSCHEDULED_DAY
 import java.time.LocalDate
 import com.archiekuo.travelledger.logic.PlanParser
 
@@ -66,6 +67,7 @@ fun TodayTab(
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 40.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        actions.dayNotes[t]?.let { note -> item { DayNoteCard(note, startOpen = true, canEdit = !actions.readOnly) { actions.editDayNote(t) } } }
         when {
             t < trip.startDate -> beforeTrip(trip, plans, expenses, t, actions, onTab)
             t > trip.endDate -> afterTrip(trip, plans, expenses, onTab, actions)
@@ -260,9 +262,11 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
         }
         if (!byType) {
             val unscheduled = plans.filter { it.date == null }
-            if (unscheduled.isNotEmpty()) {
+            val looseNote = actions.dayNotes[UNSCHEDULED_DAY]
+            if (unscheduled.isNotEmpty() || looseNote != null) {
                 item { SectionHeader("待排 · ${unscheduled.size} 項") }
-                item { PlanCard(unscheduled, trip, showDate = false, withActions = false, actions = actions) }
+                looseNote?.let { n -> item { DayNoteCard(n, canEdit = !actions.readOnly) { actions.editDayNote(UNSCHEDULED_DAY) } } }
+                if (unscheduled.isNotEmpty()) item { PlanCard(unscheduled, trip, showDate = false, withActions = false, actions = actions) }
             }
             for (day in trip.startDate..trip.endDate) {
                 val rows = plans.filter { it.date == day }
@@ -270,9 +274,11 @@ fun PlanTab(trip: Trip, plans: List<PlanRow>, pad: PaddingValues, actions: TripA
                     Row(Modifier.fillMaxWidth().padding(start = 4.dp, top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("Day ${day - trip.startDate + 1}", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
                         Text("  ${fmtShortDate(day)}", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                        if (!actions.readOnly && actions.dayNotes[day] == null) SmallAdd("筆記", Icons.Rounded.EditNote) { actions.editDayNote(day) }
                         SmallAdd("加入") { actions.addPlan(day) }
                     }
                 }
+                actions.dayNotes[day]?.let { n -> item(key = "n$day") { DayNoteCard(n, canEdit = !actions.readOnly) { actions.editDayNote(day) } } }
                 item(key = "c$day") {
                     if (rows.isEmpty()) {
                         Text("還沒有安排", style = MaterialTheme.typography.bodyMedium, color = ledger.textMuted, modifier = Modifier.padding(start = 4.dp))
@@ -452,15 +458,11 @@ data class PlanActions(
     val back: () -> Unit = {},
     val record: () -> Unit = {},
     val openMap: (PlanItem) -> Unit = {},
-    /** Turn the note into separate plan items on the same day (optionally removing this one). */
-    val split: (items: List<PlanItem>, deleteOriginal: Boolean) -> Unit = { _, _ -> },
 )
 
 @Composable
 fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isNew: Boolean, actions: PlanActions) {
     var pickTime by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    var splitting by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -527,24 +529,6 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                 LinkAwareInput(p.note, { v -> actions.edit { it.copy(note = v) } }, "必點菜色、營業時間、注意事項…", singleLine = false, minHeight = 60.dp)
             }
             LinkButtons(p.note)
-            if (!isNew && p.note.lines().count { it.isNotBlank() } >= 2) {
-                OutlinedButton({ splitting = true }, Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp)) {
-                    Icon(Icons.Rounded.CallSplit, null)
-                    Spacer(Modifier.width(6.dp))
-                    Text("把筆記拆成多個行程")
-                }
-            }
-
-            if (!isNew) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(actions.record, Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(14.dp)) {
-                        Icon(Icons.Rounded.AddCard, null)
-                        Spacer(Modifier.width(6.dp))
-                        Text("為這個行程記一筆")
-                    }
-                    TextButton({ confirmDelete = true }, Modifier.height(50.dp)) { Text("刪除", color = MaterialTheme.colorScheme.error) }
-                }
-            }
         }
         if (pickTime) {
             val m = p.minuteOfDay ?: 12 * 60
@@ -555,21 +539,6 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                 text = { TimePicker(st) },
                 confirmButton = { TextButton({ actions.edit { it.copy(minuteOfDay = st.hour * 60 + st.minute) }; pickTime = false }) { Text("確定") } },
                 dismissButton = { TextButton({ actions.edit { it.copy(minuteOfDay = null) }; pickTime = false }) { Text("不指定時間") } },
-            )
-        }
-        if (splitting) {
-            SplitNoteDialog(p, categories, onDismiss = { splitting = false }) { items, deleteOriginal ->
-                splitting = false
-                actions.split(items, deleteOriginal)
-            }
-        }
-        if (confirmDelete) {
-            AlertDialog(
-                onDismissRequest = { confirmDelete = false },
-                title = { Text("刪除「${p.title}」?") },
-                text = { Text("已記的支出會保留,只是不再連到這個行程。") },
-                confirmButton = { TextButton({ confirmDelete = false; actions.delete() }) { Text("刪除", color = MaterialTheme.colorScheme.error) } },
-                dismissButton = { TextButton({ confirmDelete = false }) { Text("取消") } },
             )
         }
     }
@@ -651,12 +620,11 @@ private fun ChoiceChip(options: List<String>, selected: Int, icons: List<ImageVe
  * time and category. Untick lines that are not places, tap a category to change it.
  */
 @Composable
-fun SplitNoteDialog(source: PlanItem, categories: List<Category>, onDismiss: () -> Unit, onCreate: (List<PlanItem>, Boolean) -> Unit) {
+fun SplitNoteDialog(source: PlanItem, categories: List<Category>, onDismiss: () -> Unit, onCreate: (List<PlanItem>) -> Unit) {
     val parsed = remember(source.note) { PlanParser.splitNote(source.note) }
     val byName = categories.associateBy { it.name }
     val chosen = remember(source.note) { mutableStateListOf(*Array(parsed.size) { true }) }
     val cats = remember(source.note) { mutableStateListOf(*parsed.map { p -> p.categoryHint?.let { byName[it]?.id } }.toTypedArray()) }
-    var deleteOriginal by remember { mutableStateOf(true) }
     var menuFor by remember { mutableStateOf<Int?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -696,11 +664,13 @@ fun SplitNoteDialog(source: PlanItem, categories: List<Category>, onDismiss: () 
                         }
                     }
                 }
-                Spacer(Modifier.height(4.dp))
-                Row(Modifier.fillMaxWidth().clickable { deleteOriginal = !deleteOriginal }, verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(deleteOriginal, { deleteOriginal = it })
-                    Text("拆完刪除原本的「${source.title}」", style = MaterialTheme.typography.bodyMedium)
-                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    if (source.pending) "原本的「${source.title}」會保留。"
+                    else "原本的「${source.title}」整段筆記會移到" + (source.date?.let { " ${fmtShortDate(it)} " } ?: "「待排」") +
+                        "的「當日筆記」,方便對照;拆完也可以按「復原」。",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         },
         confirmButton = {
@@ -713,11 +683,58 @@ fun SplitNoteDialog(source: PlanItem, categories: List<Category>, onDismiss: () 
                             minuteOfDay = p.minuteOfDay, location = p.location, pending = source.pending,
                         )
                     }
-                    onCreate(items, deleteOriginal)
+                    onCreate(items)
                 },
                 enabled = chosen.any { it },
             ) { Text("建立") }
         },
+        dismissButton = { TextButton(onDismiss) { Text("取消") } },
+    )
+}
+
+/**
+ * A day's note under its heading: one line until tapped, then the whole text (links tappable) and a pencil.
+ * Long notes moved here when a plan item was split stay readable for comparing.
+ */
+@Composable
+fun DayNoteCard(text: String, startOpen: Boolean = false, canEdit: Boolean, onEdit: () -> Unit) {
+    var open by rememberSaveable(text) { mutableStateOf(startOpen || text.lines().size <= 2) }
+    val cs = MaterialTheme.colorScheme
+    Column(
+        Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).background(ledger.warning.copy(alpha = if (ledger.dark) 0.14f else 0.09f))
+            .clickable { open = !open }.padding(start = 14.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.EditNote, null, Modifier.size(20.dp), tint = ledger.warning)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (open) "當日筆記" else "當日筆記 · " + text.lineSequence().first { it.isNotBlank() }.trim(),
+                style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
+            )
+            if (canEdit) IconButton(onEdit, Modifier.size(40.dp)) { Icon(Icons.Rounded.Edit, "編輯當日筆記", Modifier.size(18.dp), tint = cs.onSurfaceVariant) }
+            Icon(if (open) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, if (open) "收起" else "展開", tint = cs.onSurfaceVariant)
+            Spacer(Modifier.width(6.dp))
+        }
+        if (open) {
+            LinkText(text, Modifier.padding(top = 4.dp, end = 10.dp), style = MaterialTheme.typography.bodyMedium.copy(color = cs.onSurface))
+        }
+    }
+}
+
+/** Writing a day's note; clearing the text removes it. */
+@Composable
+fun DayNoteDialog(title: String, initial: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                text, { text = it }, Modifier.fillMaxWidth().heightIn(min = 160.dp),
+                placeholder = { Text("例如:今天早點出門、記得帶護照…") }, shape = MaterialTheme.shapes.medium,
+            )
+        },
+        confirmButton = { TextButton({ onSave(text) }) { Text("儲存") } },
         dismissButton = { TextButton(onDismiss) { Text("取消") } },
     )
 }

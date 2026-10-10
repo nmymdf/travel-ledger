@@ -58,6 +58,10 @@ data class TripActions(
     val readOnly: Boolean = false,
     /** My additions on a shared trip not yet taken in by the organizer. */
     val pendingCount: Int = 0,
+    /** Day notes by epoch day ([com.archiekuo.travelledger.data.UNSCHEDULED_DAY] for 待排). */
+    val dayNotes: Map<Long, String> = emptyMap(),
+    val editDayNote: (day: Long) -> Unit = {},
+    val saveDayNote: (day: Long, text: String) -> Unit = { _, _ -> },
     val sendAdditions: () -> Unit = {},
 )
 
@@ -75,10 +79,23 @@ fun TripScreen(
 ) {
     var menu by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    var editingNote by remember { mutableStateOf<Long?>(null) }
+    val acts = actions.copy(editDayNote = { day -> editingNote = day })
     val current = tab ?: trip?.let { defaultTab(it, today) } ?: TripTab.LEDGER
+
+    // "已拆成 6 個行程 [復原]" after splitting a note, for about ten seconds.
+    val snackbar = remember { SnackbarHostState() }
+    val undo = UndoInbox.pending
+    LaunchedEffect(undo) {
+        if (undo == null) return@LaunchedEffect
+        val result = snackbar.showSnackbar(undo.message, actionLabel = "復原", duration = SnackbarDuration.Long)
+        if (result == SnackbarResult.ActionPerformed) undo.undo()
+        if (UndoInbox.pending === undo) UndoInbox.pending = null
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             Row(
                 Modifier.fillMaxWidth().statusBarsPadding().height(64.dp).padding(start = 12.dp, end = 4.dp),
@@ -126,12 +143,20 @@ fun TripScreen(
             Box(Modifier.weight(1f)) {
                 val inner = PaddingValues(bottom = pad.calculateBottomPadding())
                 when (current) {
-                    TripTab.TODAY -> TodayTab(t, plans, expenses, today, inner, actions) { onTab(it) }
-                    TripTab.PLAN -> PlanTab(t, plans, inner, actions)
-                    TripTab.LEDGER -> LedgerTab(t, memberCount, expenses, today, inner, actions)
+                    TripTab.TODAY -> TodayTab(t, plans, expenses, today, inner, acts) { onTab(it) }
+                    TripTab.PLAN -> PlanTab(t, plans, inner, acts)
+                    TripTab.LEDGER -> LedgerTab(t, memberCount, expenses, today, inner, acts)
                     TripTab.STATS -> StatsTab(t, memberCount, expenses, inner)
                 }
             }
+        }
+    }
+
+    editingNote?.let { day ->
+        val title = if (day == com.archiekuo.travelledger.data.UNSCHEDULED_DAY) "待排筆記" else "${fmtShortDate(day)} 當日筆記"
+        DayNoteDialog(title, actions.dayNotes[day] ?: "", onDismiss = { editingNote = null }) { text ->
+            actions.saveDayNote(day, text)
+            editingNote = null
         }
     }
 

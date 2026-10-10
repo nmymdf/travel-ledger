@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.archiekuo.travelledger.data.Category
+import com.archiekuo.travelledger.data.ExpenseRow
 import com.archiekuo.travelledger.data.HOME_CURRENCY
 import com.archiekuo.travelledger.data.PaymentMethod
 import com.archiekuo.travelledger.data.PlanItem
@@ -133,14 +134,52 @@ fun ExpenseDetailScreen(
     }
 }
 
-/** A plan item in a shared trip. */
+/** Everything the plan view can ask for; defaults keep previews and snapshots short. */
+data class PlanViewActions(
+    val back: () -> Unit = {},
+    val edit: () -> Unit = {},
+    val delete: () -> Unit = {},
+    val setStatus: (String) -> Unit = {},
+    val record: () -> Unit = {},
+    val openMap: (PlanItem) -> Unit = {},
+    val openExpense: (Long) -> Unit = {},
+    val split: (List<PlanItem>) -> Unit = {},
+)
+
+/**
+ * One plan item, to read: tapping a plan opens this, not the editor. Editing and deleting are the two icons
+ * at the top right ([canEdit] false on someone else's shared trip); the day's actions are the buttons below.
+ */
 @Composable
-fun PlanDetailScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, onBack: () -> Unit, onMap: (PlanItem) -> Unit) {
-    Scaffold(containerColor = MaterialTheme.colorScheme.background, topBar = { AppTopBar("行程", subtitle = trip?.name, onBack = onBack, closeIcon = true) }) { pad ->
+fun PlanViewScreen(
+    item: PlanItem?,
+    trip: Trip?,
+    categories: List<Category>,
+    expenses: List<ExpenseRow>,
+    canEdit: Boolean,
+    actions: PlanViewActions,
+) {
+    var confirmDelete by remember { mutableStateOf(false) }
+    var splitting by remember { mutableStateOf(false) }
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            AppTopBar(
+                "行程", subtitle = trip?.name, onBack = actions.back,
+                actions = {
+                    if (canEdit && item != null) {
+                        IconButton(actions.edit) { Icon(Icons.Rounded.Edit, "編輯") }
+                        IconButton({ confirmDelete = true }) { Icon(Icons.Rounded.DeleteOutline, "刪除") }
+                    }
+                },
+            )
+        },
+    ) { pad ->
         val p = item ?: return@Scaffold
         val t = trip ?: return@Scaffold
         val category = categories.firstOrNull { it.id == p.categoryId }
         val style = categoryStyle(category?.name, category?.icon, category?.color)
+        val done = p.status == PlanStatus.DONE
         Column(
             Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -155,27 +194,100 @@ fun PlanDetailScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, o
                             (p.date?.let { "Day ${it - t.startDate + 1} · ${fmtShortDate(it)}" } ?: "待排") + (p.minuteOfDay?.let { " · ${fmtTime(it)}" } ?: ""),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        Text(
+                            listOfNotNull(
+                                category?.name ?: "未分類",
+                                when (p.status) { PlanStatus.DONE -> "已去"; PlanStatus.SKIPPED -> "跳過"; else -> "未去" },
+                                p.addedBy?.let { "$it 補充" },
+                                "我的補充".takeIf { p.pending },
+                            ).joinToString(" · "),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
-            DetailCard(
-                buildList {
-                    add(Triple(Icons.Rounded.Category, "分類", category?.name ?: "未分類"))
-                    add(Triple(Icons.Rounded.CheckCircleOutline, "狀態", when (p.status) { PlanStatus.DONE -> "已去"; PlanStatus.SKIPPED -> "跳過"; else -> "未去" }))
-                    when (p.reservation) {
-                        Reservation.NEEDED -> add(Triple(Icons.Rounded.EventSeat, "訂位", "需要訂位" + p.reservationNote.let { if (it.isBlank()) "" else " · $it" }))
-                        Reservation.BOOKED -> add(Triple(Icons.Rounded.EventSeat, "訂位", "已訂好" + p.reservationNote.let { if (it.isBlank()) "" else " · $it" }))
-                    }
-                    if (p.location.isNotBlank()) add(Triple(Icons.Rounded.Place, "地點", p.location))
-                    p.estCost?.let { add(Triple(Icons.Rounded.Payments, "預估", fmtMoney(it))) }
-                    if (p.note.isNotBlank()) add(Triple(Icons.Rounded.Notes, "筆記", p.note))
-                },
-            )
-            FilledTonalButton({ onMap(p) }, Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(14.dp)) {
-                Icon(Icons.Rounded.Map, null)
-                Spacer(Modifier.width(6.dp))
-                Text("在地圖開啟")
+
+            val spent = expenses.sumOf { it.homeAmount }
+            val lines = buildList {
+                when (p.reservation) {
+                    Reservation.NEEDED -> add(Triple(Icons.Rounded.EventSeat, "訂位", "需要訂位" + p.reservationNote.let { if (it.isBlank()) "" else "\n$it" }))
+                    Reservation.BOOKED -> add(Triple(Icons.Rounded.EventSeat, "訂位", "已訂好" + p.reservationNote.let { if (it.isBlank()) "" else "\n$it" }))
+                }
+                if (p.location.isNotBlank()) add(Triple(Icons.Rounded.Place, "地點", p.location))
+                p.estCost?.let { add(Triple(Icons.Rounded.Payments, "預估", fmtMoney(it))) }
+                if (spent > 0) add(Triple(Icons.Rounded.ReceiptLong, "已花", fmtMoney(spent)))
             }
+            if (lines.isNotEmpty()) DetailCard(lines)
+
+            if (p.note.isNotBlank()) {
+                LedgerCard(Modifier.fillMaxWidth(), padding = PaddingValues(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Notes, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(8.dp))
+                        Text("筆記", style = MaterialTheme.typography.titleSmall)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    LinkText(p.note)
+                    if (canEdit && p.note.lines().count { it.isNotBlank() } >= 2) {
+                        Spacer(Modifier.height(10.dp))
+                        OutlinedButton({ splitting = true }, Modifier.fillMaxWidth().height(46.dp), shape = RoundedCornerShape(14.dp)) {
+                            Icon(Icons.Rounded.CallSplit, null)
+                            Spacer(Modifier.width(6.dp))
+                            Text("把筆記拆成多個行程")
+                        }
+                    }
+                }
+            }
+
+            if (expenses.isNotEmpty()) {
+                SectionHeader("為這個行程記的帳")
+                LedgerCard(Modifier.fillMaxWidth(), padding = PaddingValues(0.dp)) {
+                    expenses.forEachIndexed { i, e ->
+                        if (i > 0) HorizontalDivider(Modifier.padding(start = 66.dp), color = ledger.hairline)
+                        ExpenseRowItem(e) { actions.openExpense(e.id) }
+                    }
+                }
+            }
+
+            Button(actions.record, Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp)) {
+                Icon(Icons.Rounded.AddCard, null)
+                Spacer(Modifier.width(8.dp))
+                Text("為這個行程記一筆")
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                if (canEdit) {
+                    FilledTonalButton(
+                        { actions.setStatus(if (done) PlanStatus.TODO else PlanStatus.DONE) },
+                        Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(14.dp),
+                    ) {
+                        Icon(if (done) Icons.Rounded.Undo else Icons.Rounded.CheckCircle, null)
+                        Spacer(Modifier.width(6.dp))
+                        Text(if (done) "改回未去" else "標記已去", softWrap = false)
+                    }
+                }
+                FilledTonalButton({ actions.openMap(p) }, Modifier.weight(1f).height(50.dp), shape = RoundedCornerShape(14.dp)) {
+                    Icon(Icons.Rounded.Directions, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text("導航", softWrap = false)
+                }
+            }
+        }
+
+        if (splitting) {
+            SplitNoteDialog(p, categories, onDismiss = { splitting = false }) { items ->
+                splitting = false
+                actions.split(items)
+            }
+        }
+        if (confirmDelete) {
+            AlertDialog(
+                onDismissRequest = { confirmDelete = false },
+                icon = { Icon(Icons.Rounded.DeleteOutline, null) },
+                title = { Text("刪除「${p.title}」?") },
+                text = { Text("已記的支出會保留,只是不再連到這個行程。") },
+                confirmButton = { TextButton({ confirmDelete = false; actions.delete() }) { Text("刪除", color = MaterialTheme.colorScheme.error) } },
+                dismissButton = { TextButton({ confirmDelete = false }) { Text("取消") } },
+            )
         }
     }
 }

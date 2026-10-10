@@ -184,3 +184,20 @@ object Reservation {
     const val NEEDED = "NEEDED"
     const val BOOKED = "BOOKED"
 }
+
+/** Free text for one day of a trip ("記得帶護照", or a whole day's notes moved here after splitting them into plans). */
+@Entity(
+    tableName = "day_note",
+    primaryKeys = ["tripId", "day"],
+    foreignKeys = [ForeignKey(Trip::class, ["id"], ["tripId"], onDelete = ForeignKey.CASCADE)],
+)
+data class DayNote(
+    val tripId: Long,
+    /** Epoch day, or [UNSCHEDULED_DAY] for the 待排 list. */
+    val day: Long,
+    val text: String,
+    val updatedAt: Long = System.currentTimeMillis(),
+)
+
+/** The 待排 list has no date; its note is stored under this day. */
+const val UNSCHEDULED_DAY = Long.MIN_VALUE

@@ -71,6 +71,7 @@ class TripArchiveTest {
                 reservation = Reservation.BOOKED, reservationNote = "08:00 · 2 位", location = "京都市左京區南禪寺草川町35", estCost = 2400.0),
         )
         organizer.planDao().insert(PlanItem(tripId = trip, title = "嵐山小火車", location = "嵯峨野"))
+        organizer.dayNoteDao().set(trip, 20401, "【第二天行程】\n08:00 瓢亭")
         val members = organizer.tripDao().getMembers(trip)
         val e1 = organizer.expenseDao().insert(
             Expense(tripId = trip, date = 20401, amount = 11000.0, currency = "JPY", rate = 0.215, homeAmount = 2365.0,
@@ -130,6 +131,7 @@ class TripArchiveTest {
         assertEquals("AUTUMN", copy.coverTheme)
         assertEquals(listOf("我", "小美"), companion.tripDao().getMembers(id).map { it.name })
         assertEquals(0.215, companion.tripDao().getRates(id).single().rate, 0.0)
+        assertEquals("【第二天行程】\n08:00 瓢亭", companion.dayNoteDao().get(id, 20401)!!.text)
 
         val rows = companion.expenseDao().observeRows(id).first()
         assertEquals(3, rows.size)

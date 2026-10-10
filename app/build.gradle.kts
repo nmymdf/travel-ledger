@@ -51,8 +51,8 @@ android {
         targetSdk = 35
         // Personal phone is 64-bit ARM; keeps the bundled OCR native libraries small.
         ndk { abiFilters += "arm64-v8a" }
-        versionCode = 13
-        versionName = "0.8.1"
+        versionCode = 14
+        versionName = "0.9.0"
     }
 
     signingConfigs {

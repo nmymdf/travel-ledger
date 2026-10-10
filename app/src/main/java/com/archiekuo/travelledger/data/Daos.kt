@@ -72,6 +72,7 @@ interface TripDao {
     @Query("SELECT COUNT(*) FROM plan_item WHERE tripId = :tripId AND pending = 1")
     fun observePendingPlans(tripId: Long): Flow<Int>
     @Query("DELETE FROM member WHERE tripId = :tripId") suspend fun deleteMembers(tripId: Long)
+    @Query("DELETE FROM day_note WHERE tripId = :tripId") suspend fun deleteDayNotes(tripId: Long)
 
     @Query("DELETE FROM expense WHERE tripId = :tripId") suspend fun deleteAllExpenses(tripId: Long)
     @Query("DELETE FROM plan_item WHERE tripId = :tripId") suspend fun deleteAllPlans(tripId: Long)
@@ -79,6 +80,7 @@ interface TripDao {
     /** Empties a trip completely, for restoring a backup over it. */
     @Transaction
     suspend fun clearAll(tripId: Long) {
+        deleteDayNotes(tripId)
         deleteAllExpenses(tripId)
         deleteAllPlans(tripId)
         deleteMembers(tripId)
@@ -88,6 +90,7 @@ interface TripDao {
     /** Empties a trip (photo rows go with their expenses) so an import can refill it under the same id; my pending additions stay. */
     @Transaction
     suspend fun clearContents(tripId: Long) {
+        deleteDayNotes(tripId)
         deleteExpenses(tripId)
         deletePlans(tripId)
         deleteMembers(tripId)
@@ -250,6 +253,9 @@ interface PlanDao {
     @Query("SELECT * FROM plan_item WHERE id = :id")
     suspend fun get(id: Long): PlanItem?
 
+    @Query("SELECT * FROM plan_item WHERE id = :id")
+    fun observe(id: Long): Flow<PlanItem?>
+
     @Query("SELECT * FROM plan_item WHERE tripId = :tripId ORDER BY id")
     suspend fun forTrip(tripId: Long): List<PlanItem>
 
@@ -343,5 +349,29 @@ interface LookupDao {
     suspend fun deletePaymentMethod(id: Long) {
         clearPaymentMethod(id)
         deletePaymentMethodRow(id)
+    }
+}
+
+@Dao
+interface DayNoteDao {
+    @Query("SELECT * FROM day_note WHERE tripId = :tripId")
+    fun observe(tripId: Long): Flow<List<DayNote>>
+
+    @Query("SELECT * FROM day_note WHERE tripId = :tripId")
+    suspend fun forTrip(tripId: Long): List<DayNote>
+
+    @Query("SELECT * FROM day_note WHERE tripId = :tripId AND day = :day")
+    suspend fun get(tripId: Long, day: Long): DayNote?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun put(note: DayNote)
+
+    @Query("DELETE FROM day_note WHERE tripId = :tripId AND day = :day")
+    suspend fun delete(tripId: Long, day: Long)
+
+    /** Saves the note, or removes it when the text is blank. */
+    @Transaction
+    suspend fun set(tripId: Long, day: Long, text: String) {
+        if (text.isBlank()) delete(tripId, day) else put(DayNote(tripId, day, text.trim()))
     }
 }

@@ -146,15 +146,18 @@ class AppFlowTest {
         assertTrue(seen("今天的行程"))
         assertTrue(seen("伏見稻荷神社"))
 
-        // Record money for it from the plan editor: the title is prefilled; saving ticks it off.
+        // Tapping a plan shows it (edit and delete are icons); record money for it from there.
         tap("伏見稻荷神社")
         assertTrue(seen("為這個行程記一筆"))
+        assertTrue(rule.onAllNodesWithContentDescription("編輯").fetchSemanticsNodes().isNotEmpty())
+        assertTrue(rule.onAllNodesWithContentDescription("刪除").fetchSemanticsNodes().isNotEmpty())
         tap("為這個行程記一筆")
         assertTrue(seen("伏見稻荷神社"))
         keys("500")
         tap("儲存")
-        assertTrue(seen("為這個行程記一筆")) // back in the plan editor
-        rule.onNodeWithContentDescription("關閉").performClick()
+        assertTrue(seen("為這個行程記的帳")) // back on the plan, which lists the expense
+        assertTrue(seen("改回未去")) // and it is ticked off
+        rule.onNodeWithContentDescription("返回").performClick()
         assertTrue(seen("已花 NT$ 500"))
         assertTrue(seen("1 / 1 完成"))
     }

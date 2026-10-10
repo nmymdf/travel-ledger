@@ -3,6 +3,7 @@ package com.archiekuo.travelledger.backup
 import androidx.room.withTransaction
 import com.archiekuo.travelledger.data.AppDatabase
 import com.archiekuo.travelledger.data.Category
+import com.archiekuo.travelledger.data.DayNote
 import com.archiekuo.travelledger.data.Expense
 import com.archiekuo.travelledger.data.Member
 import com.archiekuo.travelledger.data.PaymentMethod
@@ -114,6 +115,7 @@ object TripArchive {
                     JSONObject().put("currency", r.currency).put("rate", r.rate).put("updatedAt", r.updatedAt).put("source", r.source)
                 }))
                 put("plans", JSONArray(plans.map { p -> planJson(p, categories) }))
+                put("dayNotes", JSONArray(db.dayNoteDao().forTrip(id).map { n -> JSONObject().put("day", n.day).put("text", n.text).put("updatedAt", n.updatedAt) }))
                 put("expenses", JSONArray(expenses.map { e ->
                     expenseJson(db, e, categories, methods, plans, ::attach).apply {
                         putOpt("payer", e.payerId?.let { memberIndex[it] })
@@ -411,6 +413,12 @@ object TripArchive {
         existingPlans: Boolean = false,
     ) {
         val earlierPlans = if (existingPlans) db.planDao().forTrip(tripId).associate { it.uuid to it.id } else emptyMap()
+        t.optJSONArray("dayNotes")?.let { a ->
+            for (i in 0 until a.length()) {
+                val n = a.getJSONObject(i)
+                db.dayNoteDao().put(DayNote(tripId, n.getLong("day"), n.getString("text"), n.optLong("updatedAt")))
+            }
+        }
         val names = t.getJSONArray("members").let { a -> (0 until a.length()).map { a.getString(it) } }
         val memberIds = names.map { db.tripDao().insertMember(Member(tripId = tripId, name = it)) }
         val rates = t.getJSONArray("rates")

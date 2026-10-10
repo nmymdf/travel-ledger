@@ -121,6 +121,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
             var sharing by remember { mutableStateOf(false) }
             var sendingAdditions by remember { mutableStateOf(false) }
             val pendingCount by vm.pendingCount.collectAsStateWithLifecycle()
+            val dayNotes by vm.dayNotes.collectAsStateWithLifecycle()
             var shareBusy by remember { mutableStateOf(false) }
             val scope = rememberCoroutineScope()
             val readOnly = trip?.readOnly == true
@@ -133,7 +134,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     addExpense = { planId -> nav.navigate("trip/$id/expense/0" + (planId?.let { p -> "?plan=$p" } ?: "")) },
                     openExpense = { eid -> nav.navigate("trip/$id/expense/$eid") },
                     addPlan = { date -> nav.navigate("trip/$id/plan/0" + (date?.let { d -> "?date=$d" } ?: "")) },
-                    openPlan = { pid -> nav.navigate("trip/$id/plan/$pid") },
+                    openPlan = { pid -> nav.navigate("trip/$id/planview/$pid") },
                     setPlanStatus = { pid, st -> vm.setPlanStatus(pid, st) },
                     movePlans = { ids, date -> vm.movePlans(ids, date) },
                     pastePlans = { text, date -> vm.addParsed(com.archiekuo.travelledger.logic.PlanParser.splitNote(text), date) },
@@ -141,6 +142,8 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     share = { sharing = true },
                     readOnly = readOnly,
                     pendingCount = pendingCount,
+                    dayNotes = dayNotes,
+                    saveDayNote = { day, text -> vm.setDayNote(day, text) },
                     sendAdditions = { sendingAdditions = true },
                 ),
             )
@@ -221,11 +224,6 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                 },
             )
             val categories by vm.categories.collectAsStateWithLifecycle()
-            val readOnly = vm.trip?.readOnly == true && pid != null && vm.item?.pending != true
-            if (readOnly) {
-                PlanDetailScreen(vm.item, vm.trip, categories, onBack = { nav.popBackStack() }) { p -> openMap(p.title, p.location) }
-                return@composable
-            }
             PlanEditScreen(
                 vm.item, vm.trip, categories, isNew = pid == null,
                 PlanActions(
@@ -235,9 +233,33 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     back = { nav.popBackStack() },
                     record = { pid?.let { p -> nav.navigate("trip/$id/expense/0?plan=$p") } },
                     openMap = { p -> openMap(p.title, p.location) },
-                    split = { items, deleteOriginal ->
-                        vm.split(items, deleteOriginal) {
-                            android.widget.Toast.makeText(context, "已建立 ${items.size} 個行程", android.widget.Toast.LENGTH_SHORT).show()
+                ),
+            )
+        }
+        // Tapping a plan item shows it; the pencil at the top opens the editor above.
+        composable("trip/{id}/planview/{pid}", listOf(longArg("id"), longArg("pid"))) {
+            val id = it.arguments!!.getLong("id")
+            val pid = it.arguments!!.getLong("pid")
+            val vm: PlanViewModel = viewModel(key = "planview$id/$pid", factory = viewModelFactory { initializer { PlanViewModel(db, id, pid) } })
+            val item by vm.item.collectAsStateWithLifecycle()
+            val trip by vm.trip.collectAsStateWithLifecycle()
+            val categories by vm.categories.collectAsStateWithLifecycle()
+            val expenses by vm.expenses.collectAsStateWithLifecycle()
+            // On a shared trip only my own additions can be changed.
+            val canEdit = trip?.readOnly != true || item?.pending == true
+            PlanViewScreen(
+                item, trip, categories, expenses, canEdit,
+                PlanViewActions(
+                    back = { nav.popBackStack() },
+                    edit = { nav.navigate("trip/$id/plan/$pid") },
+                    delete = { vm.delete { nav.popBackStack() } },
+                    setStatus = { st -> vm.setStatus(st) },
+                    record = { nav.navigate("trip/$id/expense/0?plan=$pid") },
+                    openMap = { p -> openMap(p.title, p.location) },
+                    openExpense = { eid -> nav.navigate("trip/$id/expense/$eid") },
+                    split = { items ->
+                        vm.split(items) { undo ->
+                            UndoInbox.pending = undo
                             nav.popBackStack()
                         }
                     },

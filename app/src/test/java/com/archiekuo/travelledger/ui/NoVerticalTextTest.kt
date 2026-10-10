@@ -94,7 +94,15 @@ class NoVerticalTextTest {
         },
         "支出明細" to { ExpenseDetailScreen(edit, categories, methods, emptyList(), {}, {}) },
         "編輯行程" to { PlanEditScreen(item, trip, categories, false, PlanActions()) },
-        "行程明細" to { PlanDetailScreen(item, shared, categories, {}, {}) },
+        "行程明細" to { PlanViewScreen(item, shared, categories, expenses.take(2), canEdit = false, PlanViewActions()) },
+        "行程內容" to { PlanViewScreen(item, trip, categories, expenses.take(2), canEdit = true, PlanViewActions()) },
+        "行程(當日筆記)" to {
+            TripScreen(
+                trip, 4, expenses, plans, TripTab.PLAN, {},
+                TripActions(dayNotes = mapOf(d(10, 10) to "【第三天行程】\n09:00 景福宮 韓服體驗\n中午 土俗村蔘雞湯", d(10, 11) to "早點出門")),
+                today,
+            )
+        },
         "編輯旅程" to {
             TripEditScreen(trip, listOf("我", "小美", "小華", "阿姨"), listOf(TripCurrencyRate(1, "KRW", 0.024), TripCurrencyRate(1, "JPY", 0.21)), null, false, {}, {}, {}, { _, _, _ -> }, today)
         },
@@ -199,7 +207,7 @@ class NoVerticalTextDialogTest {
             com.archiekuo.travelledger.data.PlanItem(1, 1, "第三天行程", null, 20750, note = "09:00 景福宮 韓服體驗\n中午 土俗村蔘雞湯\n下午3點半 北村韓屋村 → 仁寺洞\n記得帶護照"),
             listOf("吃", "交通", "購物", "住宿", "景點", "其他").mapIndexed { i, n -> com.archiekuo.travelledger.data.Category(i + 1L, n, i) },
             {},
-        ) { _, _ -> }
+        ) {}
     }
     @Test fun backupDialog() = dialog("備份") { BackupDialog(false, {}, {}, {}) }
     @Test fun importDialog() = dialog("匯入確認") {
