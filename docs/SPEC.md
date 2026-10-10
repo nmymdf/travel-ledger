@@ -202,7 +202,11 @@
 - 交換:手機「傳到電腦排行程」(kind=trip)→ 桌面「打開手機檔案」;桌面「傳到手機」產生 kind=plans 檔(trip、plans 含 uuid 與截圖、deleted、dayNotes)→ 手機確認後「併入」:同 uuid 更新、新增、刪除、當日筆記覆寫,帳目不動;沒有的旅程自動新建;別人分享的旅程拒絕。
 - 行程截圖:資料庫 v10 `plan_photo`;分享與備份一律帶上(壓縮 1600px);拆分筆記時移到第一個新行程,復原時移回。
 
-## 13.8 iPhone 版移植準備
+## 13.8 v0.10.1
+
+- 匯入/還原/併入/加入補充成功後自動刪除使用者打開的原檔(`ArchiveFiles.deleteSource`:文件選擇器的檔案用 DocumentsContract 刪除,其他來源嘗試 ContentResolver.delete;LINE 等不允許的來源保留,不報錯),提示加「(原檔已刪除)」。使用者決定所有種類(含備份)都直接刪。
+
+## 13.9 iPhone 版移植準備
 
 - `docs/IOS_PORT.md`:給 iPhone 那邊 Claude 的交接文件(資料模型、檔案格式與匯入規則、要照搬的邏輯、開發順序、介面規則)。
 - `docs/iPhone版_給家人的步驟.md`:第一次做的人看的操作步驟(Xcode、Claude Code、GitHub、TestFlight)。

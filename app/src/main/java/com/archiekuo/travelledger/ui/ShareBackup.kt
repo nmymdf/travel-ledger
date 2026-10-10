@@ -3,6 +3,7 @@ package com.archiekuo.travelledger.ui
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -89,6 +90,17 @@ object ArchiveFiles {
         val file = File(dir, "import.zip")
         context.contentResolver.openInputStream(uri)!!.use { input -> file.outputStream().use { input.copyTo(it) } }
         file
+    }
+
+    /**
+     * Deletes the file the user opened once it has been imported. Android allows this for a document picked in
+     * 「從檔案還原或匯入」 and for some file managers; a file opened from LINE belongs to LINE and stays there.
+     * Returns whether it was deleted.
+     */
+    suspend fun deleteSource(context: Context, uri: Uri): Boolean = withContext(Dispatchers.IO) {
+        runCatching { DocumentsContract.isDocumentUri(context, uri) && DocumentsContract.deleteDocument(context.contentResolver, uri) }
+            .getOrDefault(false) ||
+            runCatching { context.contentResolver.delete(uri, null, null) > 0 }.getOrDefault(false)
     }
 }
 
@@ -377,7 +389,7 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
         }.onFailure { e -> withContext(Dispatchers.Main) { fail((e as? TripArchive.BadArchive)?.message ?: "無法開啟這個檔案") } }
     }
 
-    fun finish(result: TripArchive.Result) {
+    fun finish(result: TripArchive.Result, sourceDeleted: Boolean = false) {
         busy = false
         summary = null
         additions = null
@@ -395,10 +407,16 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
                     result.kind == TripArchive.KIND_TRIP -> "已匯入,這趟旅程只能看、不能改"
                     else -> "已還原 ${result.tripIds.size} 個旅程"
                 }
-                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                Toast.makeText(context, if (sourceDeleted) "$msg(原檔已刪除)" else msg, Toast.LENGTH_LONG).show()
                 onImported(result.tripIds.singleOrNull())
             }
         }
+    }
+
+    /** After an import the opened file is no longer needed, so it goes (when Android lets us). */
+    suspend fun done(result: TripArchive.Result, source: Uri?) {
+        val deleted = result is TripArchive.Result.Imported && source != null && ArchiveFiles.deleteSource(context, source)
+        withContext(Dispatchers.Main) { finish(result, deleted) }
     }
 
     plans?.let { pv ->
@@ -428,8 +446,7 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
                             val f = file ?: return@TextButton
                             busy = true
                             scope.launch {
-                                val result = TripArchive.importPlans(db, f, context.filesDir)
-                                withContext(Dispatchers.Main) { finish(result) }
+                                done(TripArchive.importPlans(db, f, context.filesDir), uri)
                             }
                         },
                         enabled = !busy,
@@ -448,8 +465,7 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
                 val f = file ?: return@ReviewAdditionsDialog
                 busy = true
                 scope.launch {
-                    val result = TripArchive.importAdditions(db, f, context.filesDir, chosen)
-                    withContext(Dispatchers.Main) { finish(result) }
+                    done(TripArchive.importAdditions(db, f, context.filesDir, chosen), uri)
                 }
             },
         )
@@ -463,8 +479,7 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
             val f = file ?: return@ImportConfirmDialog
             busy = true
             scope.launch {
-                val result = TripArchive.import(db, f, context.filesDir)
-                withContext(Dispatchers.Main) { finish(result) }
+                done(TripArchive.import(db, f, context.filesDir), uri)
             }
         },
     )
