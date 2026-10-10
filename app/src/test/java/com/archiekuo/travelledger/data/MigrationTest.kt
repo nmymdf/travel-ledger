@@ -35,7 +35,7 @@ class MigrationTest {
             close()
         }
         // Validates each step's resulting schema against the exported schema files.
-        helper.runMigrationsAndValidate(name, 9, true, *AppDatabase.ALL_MIGRATIONS).close()
+        helper.runMigrationsAndValidate(name, 10, true, *AppDatabase.ALL_MIGRATIONS).close()
 
         val db = Room.databaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java, name)
             .addMigrations(*AppDatabase.ALL_MIGRATIONS).allowMainThreadQueries().build()
@@ -76,6 +76,7 @@ class MigrationTest {
         helper.runMigrationsAndValidate(name, 7, true, AppDatabase.MIGRATION_6_7).close()
         helper.runMigrationsAndValidate(name, 8, true, AppDatabase.MIGRATION_7_8).close()
         helper.runMigrationsAndValidate(name, 9, true, AppDatabase.MIGRATION_8_9).close()
+        helper.runMigrationsAndValidate(name, 10, true, AppDatabase.MIGRATION_9_10).close()
     }
 
     @Test fun v6GivesEachTripADifferentUuid() {

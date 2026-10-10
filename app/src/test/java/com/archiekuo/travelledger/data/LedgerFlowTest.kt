@@ -13,7 +13,6 @@ import com.archiekuo.travelledger.ui.TripListViewModel
 import com.archiekuo.travelledger.ui.currentTrip
 import com.archiekuo.travelledger.ui.toHomeAmount
 import kotlinx.coroutines.flow.first
-import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -269,6 +268,42 @@ class LedgerFlowTest {
         val back = runBlocking { db.planDao().observeRows(trip).first() }
         assertEquals(listOf("第三天行程"), back.map { it.title })
         assertEquals(null, runBlocking { db.dayNoteDao().get(trip, d(6, 12)) })
+    }
+
+    /** Pictures saved with a plan item, kept when its note is split, and their files removed when it is deleted. */
+    @Test fun planPicturesFollowTheItem() {
+        val trip = createTrip()
+        val dir = java.io.File(app.filesDir, "photos/plans").apply { mkdirs() }
+        val a = java.io.File(dir, "a.jpg").apply { writeText("a") }
+        val b = java.io.File(dir, "b.jpg").apply { writeText("b") }
+        val id = runBlocking { db.planDao().insert(PlanItem(tripId = trip, title = "第二天", date = d(6, 11), note = "淺草寺\n一蘭拉麵")) }
+        runBlocking {
+            db.planPhotoDao().insert(com.archiekuo.travelledger.data.PlanPhoto(planItemId = id, path = a.absolutePath))
+            db.planPhotoDao().insert(com.archiekuo.travelledger.data.PlanPhoto(planItemId = id, path = b.absolutePath))
+        }
+        assertEquals(2, runBlocking { db.planDao().observeRows(trip).first() }.single().photoCount)
+
+        // Removing one in the editor deletes its row and file on save.
+        val editor = PlanEditViewModel(db, trip, id, null, null)
+        assertTrue("editor ready", editor.item != null) // the test dispatcher runs its loading right away
+        assertEquals(2, editor.pictures.size)
+        editor.removePicture(1)
+        var saved = false
+        editor.save { saved = true }
+        assertTrue(saved)
+        assertTrue(!b.exists() && a.exists())
+
+        // Splitting the note moves the remaining picture to the first new item; undo brings it back.
+        val original = runBlocking { db.planDao().get(id)!! }
+        val undo = runBlocking { splitPlan(db, original, PlanParser.splitNote(original.note).map { PlanItem(tripId = trip, title = it.title, date = original.date) }, sharedTrip = false) }
+        val first = runBlocking { db.planDao().forTrip(trip) }.first { it.title == "淺草寺" }
+        assertEquals(listOf(a.absolutePath), runBlocking { db.planPhotoDao().forPlan(first.id) }.map { it.path })
+        runBlocking { undo.undo() }
+        assertEquals(listOf(a.absolutePath), runBlocking { db.planPhotoDao().forPlan(id) }.map { it.path })
+
+        // Deleting the item removes the file too.
+        runBlocking { com.archiekuo.travelledger.ui.deletePlan(db, id) }
+        assertTrue(!a.exists())
     }
 
     @Test fun planningAndRecordingFromThePlan() {

@@ -10,9 +10,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [
         Trip::class, TripCurrencyRate::class, Member::class, Category::class,
-        PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class, PlanItem::class, DayNote::class,
+        PaymentMethod::class, Expense::class, ExpenseShare::class, Photo::class, PlanItem::class, DayNote::class, PlanPhoto::class,
     ],
-    version = 9,
+    version = 10,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun tripDao(): TripDao
@@ -21,6 +21,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun photoDao(): PhotoDao
     abstract fun planDao(): PlanDao
     abstract fun dayNoteDao(): DayNoteDao
+    abstract fun planPhotoDao(): PlanPhotoDao
 
     companion object {
         /** v2: trip cover photo, category icon and color. */
@@ -105,7 +106,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+        /** v10: pictures kept with plan items. */
+        val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """CREATE TABLE IF NOT EXISTS `plan_photo` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `planItemId` INTEGER NOT NULL,
+                        `path` TEXT NOT NULL, `width` INTEGER NOT NULL, `height` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`planItemId`) REFERENCES `plan_item`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"""
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_plan_photo_planItemId` ON `plan_photo` (`planItemId`)")
+            }
+        }
+
+        val ALL_MIGRATIONS = arrayOf(
+            MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
+        )
 
         fun create(context: Context): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, "travel-ledger.db").setup().build()

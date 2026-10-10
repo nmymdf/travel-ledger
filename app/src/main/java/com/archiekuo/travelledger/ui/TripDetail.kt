@@ -54,6 +54,8 @@ data class TripActions(
     val pastePlans: (String, Long?) -> Unit = { _, _ -> },
     val openMap: (PlanRow) -> Unit = {},
     val share: () -> Unit = {},
+    /** The trip as a file for the desktop planner (卡溜趴行程桌). */
+    val sendToComputer: () -> Unit = {},
     /** A trip shared with us: the organizer's items are view-only; what we add becomes "my additions". */
     val readOnly: Boolean = false,
     /** My additions on a shared trip not yet taken in by the organizer. */
@@ -125,6 +127,7 @@ fun TripScreen(
                     DropdownMenu(menu, { menu = false }) {
                         if (!actions.readOnly) DropdownMenuItem(text = { Text("編輯旅程") }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; actions.edit() })
                         DropdownMenuItem(text = { Text("分享給同伴") }, leadingIcon = { Icon(Icons.Rounded.IosShare, null) }, onClick = { menu = false; actions.share() })
+                        if (!actions.readOnly) DropdownMenuItem(text = { Text("傳到電腦排行程") }, leadingIcon = { Icon(Icons.Rounded.Computer, null) }, onClick = { menu = false; actions.sendToComputer() })
                         DropdownMenuItem(text = { Text("所有旅程") }, leadingIcon = { Icon(Icons.Rounded.Luggage, null) }, onClick = { menu = false; actions.switchTrip() })
                         DropdownMenuItem(
                             text = { Text("刪除旅程", color = MaterialTheme.colorScheme.error) },

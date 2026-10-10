@@ -19,6 +19,7 @@ import com.archiekuo.travelledger.data.PaymentMethod
 import com.archiekuo.travelledger.data.Photo
 import com.archiekuo.travelledger.data.PhotoType
 import com.archiekuo.travelledger.data.PlanItem
+import com.archiekuo.travelledger.data.PlanPhoto
 import com.archiekuo.travelledger.data.PlanRow
 import com.archiekuo.travelledger.data.PlanStatus
 import com.archiekuo.travelledger.data.TitleSuggestion
@@ -106,7 +107,7 @@ class TripDetailViewModel(private val db: AppDatabase, private val id: Long) : V
     fun delete() {
         viewModelScope.launch {
             val cover = db.tripDao().coverPath(id)
-            val photos = db.photoDao().pathsForTrip(id)
+            val photos = db.photoDao().pathsForTrip(id) + db.planPhotoDao().pathsForTrip(id)
             db.tripDao().deleteTrip(id)
             CoverStore.delete(cover)
             photos.forEach { PhotoProcessor.delete(it) }
@@ -385,8 +386,15 @@ class PlanEditViewModel(
     private val planId: Long?,
     initialDate: Long?,
     shared: ParsedPlace?,
+    /** Needed to store pictures; null in tests that don't add any. */
+    private val app: Application? = null,
 ) : ViewModel() {
     var item by mutableStateOf<PlanItem?>(null)
+        private set
+    /** Pictures on this item as edited; saved with the item. */
+    val pictures = mutableStateListOf<PlanPicture>()
+    private val originalPictures = mutableListOf<PlanPhoto>()
+    var addingPictures by mutableStateOf(false)
         private set
     var trip by mutableStateOf<Trip?>(null)
         private set
@@ -395,6 +403,10 @@ class PlanEditViewModel(
     init {
         viewModelScope.launch {
             trip = db.tripDao().observeTrip(tripId).first()
+            planId?.let { id ->
+                originalPictures += db.planPhotoDao().forPlan(id)
+                pictures += originalPictures.map { PlanPicture(it.id, it.path, it.width, it.height) }
+            }
             item = planId?.let { db.planDao().get(it) } ?: run {
                 val cats = db.lookupDao().observeCategories().first()
                 PlanItem(
@@ -409,18 +421,41 @@ class PlanEditViewModel(
         item = item?.let(transform)
     }
 
+    fun addPictures(uris: List<android.net.Uri>) {
+        val context = app ?: return
+        addingPictures = true
+        viewModelScope.launch {
+            uris.take(MAX_PLAN_PICTURES - pictures.size).forEach { uri -> PlanPictures.import(context, uri)?.let { pictures += it } }
+            addingPictures = false
+        }
+    }
+
+    fun removePicture(index: Int) {
+        val p = pictures.getOrNull(index) ?: return
+        pictures.removeAt(index)
+        if (p.id == null) PlanPictures.delete(p.path) // saved ones go on save
+    }
+
+    /** Leaving without saving: pictures added this time are thrown away. */
+    fun cancel() {
+        pictures.filter { it.id == null }.forEach { PlanPictures.delete(it.path) }
+    }
+
     fun save(onDone: () -> Unit) {
         val i = item?.takeIf { it.title.isNotBlank() } ?: return
         viewModelScope.launch {
             val clean = i.copy(title = i.title.trim(), location = i.location.trim(), note = i.note.trim())
-            if (planId == null) db.planDao().insert(clean.copy(pending = trip?.readOnly == true)) else db.planDao().update(clean)
+            val id = if (planId == null) db.planDao().insert(clean.copy(pending = trip?.readOnly == true)) else { db.planDao().update(clean); planId }
+            val kept = pictures.mapNotNull { it.id }.toSet()
+            originalPictures.filter { it.id !in kept }.forEach { db.planPhotoDao().delete(it.id); PlanPictures.delete(it.path) }
+            pictures.filter { it.id == null }.forEach { p -> db.planPhotoDao().insert(PlanPhoto(planItemId = id, path = p.path, width = p.width, height = p.height)) }
             onDone()
         }
     }
 
     fun delete(onDone: () -> Unit) {
         val id = planId ?: return
-        viewModelScope.launch { db.planDao().delete(id); onDone() }
+        viewModelScope.launch { deletePlan(db, id); onDone() }
     }
 }
 
@@ -432,10 +467,11 @@ class PlanViewModel(private val db: AppDatabase, private val tripId: Long, priva
     val categories: StateFlow<List<Category>> = db.lookupDao().observeCategories().stateIn(this, emptyList())
     val expenses: StateFlow<List<ExpenseRow>> = db.expenseDao().observeRows(tripId)
         .map { rows -> rows.filter { it.planItemId == planId } }.stateIn(this, emptyList())
+    val pictures: StateFlow<List<PlanPhoto>> = db.planPhotoDao().observe(planId).stateIn(this, emptyList())
 
     fun setStatus(status: String) = viewModelScope.launch { db.planDao().setStatus(planId, status) }
 
-    fun delete(onDone: () -> Unit) = viewModelScope.launch { db.planDao().delete(planId); onDone() }
+    fun delete(onDone: () -> Unit) = viewModelScope.launch { deletePlan(db, planId); onDone() }
 
     /**
      * Replaces this item by [items] on the same day. Its note is kept word for word in that day's note (on a
@@ -449,6 +485,15 @@ class PlanViewModel(private val db: AppDatabase, private val tripId: Long, priva
             onDone(undo)
         }
     }
+}
+
+const val MAX_PLAN_PICTURES = 9
+
+/** Deletes a plan item with its pictures' files (expenses stay, unlinked). */
+suspend fun deletePlan(db: AppDatabase, id: Long) {
+    val paths = db.planPhotoDao().forPlan(id).map { it.path }
+    db.planDao().delete(id)
+    paths.forEach { PlanPictures.delete(it) }
 }
 
 /** An action that can be taken back from the snackbar for a short while. */
@@ -466,18 +511,23 @@ suspend fun splitPlan(db: AppDatabase, original: PlanItem, items: List<PlanItem>
     val before = noteDao.get(original.tripId, day)
     val linked = db.expenseDao().forTrip(original.tripId).filter { it.planItemId == original.id }.map { it.id }
     val created = items.map { db.planDao().insert(it.copy(pending = it.pending || sharedTrip)) }
+    // Pictures go with the first new item so no screenshot is lost.
+    val movedPictures = !sharedTrip && created.isNotEmpty() && db.planPhotoDao().forPlan(original.id).isNotEmpty()
+    if (movedPictures) db.planPhotoDao().move(original.id, created.first())
     if (!sharedTrip) {
         val moved = "【${original.title}】\n${original.note.trim()}"
         noteDao.set(original.tripId, day, listOfNotNull(before?.text, moved).joinToString("\n\n"))
         db.planDao().delete(original.id)
     }
     return PendingUndo("已拆成 ${items.size} 個行程" + if (sharedTrip) "" else ",原筆記放在當日筆記") {
-        created.forEach { db.planDao().deleteRow(it) }
+        // Bring the original back first, so its pictures can move home before the new items (and their rows) go.
         if (!sharedTrip) {
             db.planDao().insert(original)
+            if (movedPictures) db.planPhotoDao().move(created.first(), original.id)
             linked.forEach { db.expenseDao().setPlan(it, original.id) }
             if (before == null) noteDao.delete(original.tripId, day) else noteDao.put(before)
         }
+        created.forEach { db.planDao().deleteRow(it) }
     }
 }
 

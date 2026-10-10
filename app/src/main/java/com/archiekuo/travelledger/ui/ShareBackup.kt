@@ -348,6 +348,7 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
     var existing by remember { mutableStateOf(emptySet<String>()) }
     var additions by remember { mutableStateOf<TripArchive.Additions?>(null) }
     var newerHere by remember { mutableStateOf(emptyList<String>()) }
+    var plans by remember { mutableStateOf<TripArchive.PlansPreview?>(null) }
     var busy by remember { mutableStateOf(false) }
 
     fun fail(message: String) {
@@ -362,12 +363,14 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
             val f = ArchiveFiles.copyIn(context, uri)
             val s = withContext(Dispatchers.IO) { TripArchive.readSummary(f) }
             val adds = if (s.kind == TripArchive.KIND_ADDITIONS) withContext(Dispatchers.IO) { TripArchive.readAdditions(f) } else null
+            val plansPreview = if (s.kind == TripArchive.KIND_PLANS) TripArchive.previewPlans(db, f) else null
             val known = withContext(Dispatchers.IO) { s.trips.mapNotNull { t -> db.tripDao().findByUuid(t.uuid)?.uuid }.toSet() }
             val newer = if (s.kind != TripArchive.KIND_BACKUP) emptyList() else withContext(Dispatchers.IO) { TripArchive.newerOnPhone(db, s) }
             withContext(Dispatchers.Main) {
                 existing = known
                 newerHere = newer
                 additions = adds
+                plans = plansPreview
                 file = f
                 summary = s
             }
@@ -378,12 +381,14 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
         busy = false
         summary = null
         additions = null
+        plans = null
         ImportInbox.pending = null
         file?.delete()
         when (result) {
             is TripArchive.Result.Failed -> Toast.makeText(context, result.message, Toast.LENGTH_LONG).show()
             is TripArchive.Result.Imported -> {
                 val msg = when {
+                    result.kind == TripArchive.KIND_PLANS -> "已併入電腦排的行程"
                     result.kind == TripArchive.KIND_ADDITIONS ->
                         if (result.updated > 0) "已加入 ${result.updated} 項,記得再分享一次給大家" else "這些項目之前已經加入過了"
                     result.kind == TripArchive.KIND_TRIP && result.updated > 0 -> "已更新同伴分享的旅程"
@@ -396,6 +401,45 @@ fun ImportHost(db: AppDatabase, onImported: (tripId: Long?) -> Unit) {
         }
     }
 
+    plans?.let { pv ->
+        AlertDialog(
+            onDismissRequest = { if (!busy) { ImportInbox.pending = null; summary = null; plans = null } },
+            icon = { Icon(Icons.Rounded.Computer, null) },
+            title = { Text(if (pv.refused != null) "無法併入" else "電腦排的行程") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(pv.tripName, style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        pv.refused ?: buildString {
+                            if (pv.newTrip) append("手機上還沒有這趟旅程,會新建一趟。\n")
+                            append("新增 ${pv.added} 個、更新 ${pv.updated} 個")
+                            if (pv.deleted > 0) append("、刪除 ${pv.deleted} 個")
+                            append("行程。\n帳目不會被改動;同一個行程以電腦上的內容為準。")
+                        },
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (busy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                }
+            },
+            confirmButton = {
+                if (pv.refused == null) {
+                    TextButton(
+                        {
+                            val f = file ?: return@TextButton
+                            busy = true
+                            scope.launch {
+                                val result = TripArchive.importPlans(db, f, context.filesDir)
+                                withContext(Dispatchers.Main) { finish(result) }
+                            }
+                        },
+                        enabled = !busy,
+                    ) { Text("併入") }
+                }
+            },
+            dismissButton = { TextButton({ ImportInbox.pending = null; summary = null; plans = null }, enabled = !busy) { Text(if (pv.refused == null) "取消" else "知道了") } },
+        )
+        return
+    }
     additions?.let { adds ->
         ReviewAdditionsDialog(
             adds, busy,

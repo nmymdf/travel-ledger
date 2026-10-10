@@ -117,7 +117,7 @@
   <div class="sub">使用說明書</div>
   <p class="tagline">出國旅遊的記帳與行程規劃 App。記一筆只要三步,收據拍照自動辨識,出發前做的功課也能一起帶著走。</p>
   <div class="meta">
-    <div>適用版本 v0.9.3<br>文件日期 2026 年 10 月 10 日<br>Android 10 以上</div>
+    <div>適用版本 v0.10.0<br>文件日期 2026 年 10 月 10 日<br>Android 10 以上</div>
     <div style="text-align:right"><div style="font-size:10pt;color:var(--muted)">作者</div><span class="sign">ArchieKUO</span></div>
   </div>
 </section>
@@ -138,8 +138,9 @@
     <li><span class="n">10</span>旅程列表<span class="d">切換與新增旅程</span></li>
     <li><span class="n">11</span>設定<span class="d">外觀、字體大小、照片、分類、付款方式、備份</span></li>
     <li><span class="n">12</span>備份與分享給同伴<span class="d">換手機還原、用 LINE 給同伴看帳</span></li>
-    <li><span class="n">13</span>常見問題</li>
-    <li><span class="n">14</span>尚未提供的功能與版本紀錄</li>
+    <li><span class="n">13</span>電腦行程桌<span class="d">在電腦上排行程,傳到手機</span></li>
+    <li><span class="n">14</span>常見問題</li>
+    <li><span class="n">15</span>尚未提供的功能與版本紀錄</li>
   </ol>
 </section>
 
@@ -342,7 +343,8 @@
     <tr><td>哪一天</td><td>一排方形日期格子(日期下面是星期),往右滑看其他天;第一格是「待排」。「加時間」可指定時間。</td></tr>
     <tr><td>狀態、訂位</td><td>同一行的兩個小選單:未去/已去/跳過;不用訂位/需要訂位/已訂好。已訂好可填訂位時間、人數、確認編號。</td></tr>
     <tr><td>地點</td><td>地址或 Google 地圖連結。右邊的地圖鈕可直接開地圖。</td></tr>
-    <tr><td>筆記</td><td>在最下面:必點菜色、營業時間、注意事項…先留兩行,字多會自動長高。</td></tr>
+    <tr><td>筆記</td><td>必點菜色、營業時間、注意事項…先留兩行,字多會自動長高。</td></tr>
+    <tr><td>截圖/圖片</td><td>在最下面:從相簿選菜單、營業時間、路線的截圖,最多 9 張。點行程時看得到,點圖可以放大。分享給同伴和備份時都會一起帶過去。</td></tr>
   </table>
   <div class="note"><b>網址和電話可以點</b>地點、訂位資訊、筆記和支出的備註裡的網址(訂位網頁、Google 地圖連結)和電話號碼會變成藍色底線,<b>直接點就會開啟或撥號</b>;點其他文字則是修改內容。欄位下方也有「↗ 開啟」「撥打」按鈕。</div>
 
@@ -540,7 +542,49 @@
 
 <!-- ───────────── 13 ───────────── -->
 <section class="chapter">
-  <div class="chapter-head"><span class="no">13</span><h2>常見問題</h2></div>
+  <div class="chapter-head"><span class="no">13</span><h2>電腦行程桌</h2></div>
+  <p class="lead">在家用電腦大螢幕排行程,排好傳到手機。這是一個網頁檔「<b>卡溜趴行程桌.html</b>」,用 Chrome 或 Edge 打開就能用,不用安裝、不用網路。這裡只有行程,沒有記帳。</p>
+
+  <h3>開始</h3>
+  <ol class="steps">
+    <li>把「卡溜趴行程桌.html」存到電腦(例如桌面),雙擊用 Chrome 或 Edge 打開。</li>
+    <li><b>從手機開始</b>:手機旅程右上角 ⋮ →「<b>傳到電腦排行程</b>」,用 LINE 傳給自己;電腦上按「<b>打開手機檔案</b>」選這個檔案(或直接把檔案拖進網頁)。<br><b>或從頭開始</b>:按「＋ 新增旅程」,填名稱和日期。</li>
+  </ol>
+
+  <h3>排行程</h3>
+  <figure class="phone" style="max-width:100%"><img src="../screens/desktop-board.png" style="border-radius:3mm"><figcaption>每一天一欄,最左邊是待排</figcaption></figure>
+  <ul>
+    <li><b>新增</b>:在每一欄最下面輸入,按 Enter。會自動帶入時間和分類。</li>
+    <li><b>貼上一大段文字</b>:貼進欄位下方的輸入框(或點一下欄位後按 Ctrl+V),會出現預覽,每一行一個行程,可以改名稱、時間、分類,不要的取消勾選。也可以勾「另外把整段原文存成這一天的筆記」。</li>
+    <li><b>拖曳</b>:用滑鼠把行程拖到別天或待排。同一天依時間排序。</li>
+    <li><b>Google 地圖</b>:把瀏覽器網址列的地圖連結拖進欄位,會用地點名稱建立行程,地點欄放連結。</li>
+    <li><b>截圖</b>:截圖後點一下欄位按 Ctrl+V,會建立一個「截圖」行程;打開某個行程時按 Ctrl+V,截圖就加在那個行程。也可以把圖片檔拖進欄位或行程。每個行程最多 9 張。</li>
+    <li><b>當日筆記</b>:點欄位上方的「寫筆記」。</li>
+    <li>點行程打開右邊的編輯區:名稱、分類、哪一天、時間、狀態、訂位、地點、筆記、截圖;網址可以點開。右上角 🗑 刪除。</li>
+    <li>字太小:右上角「A＋」。</li>
+  </ul>
+  <div class="phones two">
+    <figure class="phone"><img src="../screens/desktop-split.png"><figcaption>貼上多行的預覽</figcaption></figure>
+    <figure class="phone"><img src="../screens/desktop-editor.png"><figcaption>編輯行程與截圖</figcaption></figure>
+  </div>
+
+  <h3>傳到手機</h3>
+  <ol class="steps">
+    <li>按右上角「<b>傳到手機</b>」,會下載一個「卡溜趴行程-旅程名稱.zip」。</li>
+    <li>用 <b>LINE 電腦版</b>把檔案傳給自己(或 Keep)。</li>
+    <li>手機在 LINE 點檔案 →「用其他應用程式開啟」→ <b>卡溜趴</b>,畫面會說明「新增幾個、更新幾個、刪除幾個」,按「<b>併入</b>」。</li>
+  </ol>
+  <ul>
+    <li>同一個行程會更新,不會重複;電腦上刪掉的,手機上也會刪掉。<b>帳目完全不會被改動。</b></li>
+    <li>手機上還沒有這趟旅程時,會自動新建一趟。</li>
+    <li>同一個行程在手機和電腦都改過時,以<b>最後傳的那邊</b>為準。建議:<b>出發前用電腦排,排好傳到手機;出發後只在手機改。</b></li>
+    <li>資料存在這台電腦的瀏覽器裡。換電腦或換瀏覽器不會跟著走,需要時再從手機傳一次。</li>
+  </ul>
+</section>
+
+<!-- ───────────── 14 ───────────── -->
+<section class="chapter">
+  <div class="chapter-head"><span class="no">14</span><h2>常見問題</h2></div>
   <table>
     <tr><th style="width:52mm">問題</th><th>回答</th></tr>
     <tr><td>刷卡匯率跟預設不一樣?</td><td>在記一筆的計算機上點「匯率 ✎」修改這一筆即可,不影響其他筆。要改之後的預設值,到「編輯旅程 → 預設匯率」。</td></tr>
@@ -558,9 +602,9 @@
   </table>
 </section>
 
-<!-- ───────────── 14 ───────────── -->
+<!-- ───────────── 15 ───────────── -->
 <section class="chapter">
-  <div class="chapter-head"><span class="no">14</span><h2>尚未提供的功能與版本紀錄</h2></div>
+  <div class="chapter-head"><span class="no">15</span><h2>尚未提供的功能與版本紀錄</h2></div>
   <h3>規劃中的功能</h3>
   <ul>
     <li><b>分帳結算</b>:記錄誰付款、誰分攤,自動算出誰該付誰多少。</li>
@@ -575,6 +619,7 @@
   <h3>版本紀錄</h3>
   <table>
     <tr><th style="width:22mm">版本</th><th>內容</th></tr>
+    <tr><td>v0.10.0</td><td>新增電腦行程桌(網頁,不用安裝);行程可以附截圖;手機「傳到電腦排行程」與「併入」電腦排的行程。</td></tr>
     <tr><td>v0.9.3</td><td>筆記放回編輯行程的最下面。</td></tr>
     <tr><td>v0.9.2</td><td>編輯行程:名稱可兩行、可換行;筆記先留兩行、字多自動長高;拿掉「預估花費」(行程上改看實際「已花」)。</td></tr>
     <tr><td>v0.9.1</td><td>每趟旅程可選導航軟體(Google 地圖/Naver Map/KakaoMap);分類優先照你寫的標籤(【交通】等)與「搭乘、步行」;修正大字體時按鈕文字被切到、頭像與日期擠壓;自動檢查改用更大的字體並偵測文字被切到。</td></tr>

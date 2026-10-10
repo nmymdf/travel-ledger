@@ -160,8 +160,10 @@ fun PlanViewScreen(
     expenses: List<ExpenseRow>,
     canEdit: Boolean,
     actions: PlanViewActions,
+    pictures: List<String> = emptyList(),
 ) {
     var confirmDelete by remember { mutableStateOf(false) }
+    var viewing by remember { mutableStateOf<Int?>(null) }
     var splitting by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -240,6 +242,8 @@ fun PlanViewScreen(
                 }
             }
 
+            if (pictures.isNotEmpty()) PictureStrip(pictures, onOpen = { viewing = it })
+
             if (expenses.isNotEmpty()) {
                 SectionHeader("為這個行程記的帳")
                 LedgerCard(Modifier.fillMaxWidth(), padding = PaddingValues(0.dp)) {
@@ -286,6 +290,14 @@ fun PlanViewScreen(
             SplitNoteDialog(p, categories, onDismiss = { splitting = false }) { items ->
                 splitting = false
                 actions.split(items)
+            }
+        }
+        viewing?.let { i ->
+            if (i in pictures.indices) {
+                PhotoViewer(
+                    pictures.map { PhotoItem(null, it, com.archiekuo.travelledger.data.PhotoType.MEMORY) }, i,
+                    onClose = { viewing = null }, onType = { _, _ -> }, onDelete = {}, onSave = {}, editable = false,
+                )
             }
         }
         if (confirmDelete) {

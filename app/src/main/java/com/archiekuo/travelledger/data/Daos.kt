@@ -235,6 +235,7 @@ data class PlanRow(
     val spent: Double,
     val addedBy: String? = null,
     val pending: Boolean = false,
+    val photoCount: Int = 0,
 )
 
 @Dao
@@ -243,7 +244,7 @@ interface PlanDao {
         """SELECT pl.id, pl.title, pl.categoryId, c.name AS categoryName, c.icon AS categoryIcon, c.color AS categoryColor,
                   pl.date, pl.minuteOfDay, pl.status, pl.reservation, pl.reservationNote, pl.location, pl.estCost,
                   COALESCE((SELECT SUM(homeAmount) FROM expense WHERE planItemId = pl.id), 0) AS spent,
-                  pl.addedBy, pl.pending
+                  pl.addedBy, pl.pending, (SELECT COUNT(*) FROM plan_photo WHERE planItemId = pl.id) AS photoCount
            FROM plan_item pl LEFT JOIN category c ON c.id = pl.categoryId
            WHERE pl.tripId = :tripId
            ORDER BY pl.date IS NULL, pl.date, pl.minuteOfDay IS NULL, pl.minuteOfDay, pl.id"""
@@ -261,6 +262,9 @@ interface PlanDao {
 
     @Query("SELECT uuid FROM plan_item WHERE tripId = :tripId")
     suspend fun uuids(tripId: Long): List<String>
+
+    @Query("SELECT * FROM plan_item WHERE tripId = :tripId AND uuid = :uuid LIMIT 1")
+    suspend fun findByUuid(tripId: Long, uuid: String): PlanItem?
 
     @Insert suspend fun insert(item: PlanItem): Long
     @Insert suspend fun insertAll(items: List<PlanItem>)
@@ -374,4 +378,27 @@ interface DayNoteDao {
     suspend fun set(tripId: Long, day: Long, text: String) {
         if (text.isBlank()) delete(tripId, day) else put(DayNote(tripId, day, text.trim()))
     }
+}
+
+@Dao
+interface PlanPhotoDao {
+    @Query("SELECT * FROM plan_photo WHERE planItemId = :planId ORDER BY id")
+    suspend fun forPlan(planId: Long): List<PlanPhoto>
+
+    @Query("SELECT * FROM plan_photo WHERE planItemId = :planId ORDER BY id")
+    fun observe(planId: Long): Flow<List<PlanPhoto>>
+
+    @Query("SELECT path FROM plan_photo WHERE planItemId IN (SELECT id FROM plan_item WHERE tripId = :tripId)")
+    suspend fun pathsForTrip(tripId: Long): List<String>
+
+    @Query("SELECT path FROM plan_photo WHERE planItemId IN (SELECT id FROM plan_item WHERE tripId = :tripId AND pending = 0)")
+    suspend fun pathsForOfficial(tripId: Long): List<String>
+
+    @Insert suspend fun insert(photo: PlanPhoto): Long
+
+    @Query("DELETE FROM plan_photo WHERE id = :id")
+    suspend fun delete(id: Long)
+
+    @Query("UPDATE plan_photo SET planItemId = :to WHERE planItemId = :from")
+    suspend fun move(from: Long, to: Long)
 }

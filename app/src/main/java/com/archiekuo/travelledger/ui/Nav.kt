@@ -136,6 +136,18 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                     pastePlans = { text, date -> vm.addParsed(com.archiekuo.travelledger.logic.PlanParser.splitNote(text), date) },
                     openMap = { p -> openMap(trip, p.title, p.location) },
                     share = { sharing = true },
+                    sendToComputer = {
+                        val t = trip ?: return@TripActions
+                        scope.launch {
+                            runCatching {
+                                ArchiveFiles.exportForShare(
+                                    context, db, "卡溜趴行程-${t.name.replace(Regex("[\\\\/:*?\"<>|\\s]+"), "_").take(40)}.zip",
+                                    com.archiekuo.travelledger.backup.TripArchive.KIND_TRIP, listOf(t.id), false, settings.myName.ifBlank { "我" },
+                                )
+                            }.onSuccess { uri -> ArchiveFiles.send(context, uri, "傳到電腦", "卡溜趴行程:${t.name}(在電腦的卡溜趴行程桌打開)") }
+                                .onFailure { android.widget.Toast.makeText(context, "產生檔案失敗", android.widget.Toast.LENGTH_LONG).show() }
+                        }
+                    },
                     readOnly = readOnly,
                     pendingCount = pendingCount,
                     dayNotes = dayNotes,
@@ -215,21 +227,31 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                 key = "plan$id/$pid/$date/$fromShare",
                 factory = viewModelFactory {
                     initializer {
-                        PlanEditViewModel(db, id, pid, date, if (fromShare) SharedPlaceInbox.pending.also { SharedPlaceInbox.pending = null } else null)
+                        PlanEditViewModel(
+                            db, id, pid, date, if (fromShare) SharedPlaceInbox.pending.also { SharedPlaceInbox.pending = null } else null,
+                            context.applicationContext as Application,
+                        )
                     }
                 },
             )
             val categories by vm.categories.collectAsStateWithLifecycle()
+            val pickPictures = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_PLAN_PICTURES)) { uris ->
+                if (uris.isNotEmpty()) vm.addPictures(uris)
+            }
+            androidx.activity.compose.BackHandler { vm.cancel(); nav.popBackStack() }
             PlanEditScreen(
                 vm.item, vm.trip, categories, isNew = pid == null,
                 PlanActions(
                     edit = vm::edit,
                     save = { vm.save { nav.popBackStack() } },
                     delete = { vm.delete { nav.popBackStack() } },
-                    back = { nav.popBackStack() },
+                    back = { vm.cancel(); nav.popBackStack() },
+                    addPictures = { pickPictures.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                    removePicture = vm::removePicture,
                     record = { pid?.let { p -> nav.navigate("trip/$id/expense/0?plan=$p") } },
                     openMap = { p -> openMap(vm.trip, p.title, p.location) },
                 ),
+                pictures = vm.pictures, addingPictures = vm.addingPictures,
             )
         }
         // Tapping a plan item shows it; the pencil at the top opens the editor above.
@@ -241,6 +263,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
             val trip by vm.trip.collectAsStateWithLifecycle()
             val categories by vm.categories.collectAsStateWithLifecycle()
             val expenses by vm.expenses.collectAsStateWithLifecycle()
+            val pictures by vm.pictures.collectAsStateWithLifecycle()
             // On a shared trip only my own additions can be changed.
             val canEdit = trip?.readOnly != true || item?.pending == true
             PlanViewScreen(
@@ -260,6 +283,7 @@ fun AppNav(db: AppDatabase, settings: AppSettings, onSettings: (AppSettings) -> 
                         }
                     },
                 ),
+                pictures = pictures.map { it.path },
             )
         }
         composable("settings") {

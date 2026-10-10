@@ -10,6 +10,7 @@ import com.archiekuo.travelledger.data.PaymentMethod
 import com.archiekuo.travelledger.data.Photo
 import com.archiekuo.travelledger.data.PhotoType
 import com.archiekuo.travelledger.data.PlanItem
+import com.archiekuo.travelledger.data.PlanPhoto
 import com.archiekuo.travelledger.data.Trip
 import com.archiekuo.travelledger.data.TripCurrencyRate
 import kotlinx.coroutines.Dispatchers
@@ -39,6 +40,8 @@ object TripArchive {
     const val KIND_BACKUP = "backup"
     /** A companion's suggestions for a shared trip, sent back to its organizer. */
     const val KIND_ADDITIONS = "additions"
+    /** Plans made on the desktop planner (卡溜趴行程桌), merged into the phone's own trip. */
+    const val KIND_PLANS = "plans"
 
     data class TripInfo(val uuid: String, val name: String, val startDate: Long, val endDate: Long, val expenseCount: Int, val totalHome: Double)
 
@@ -78,8 +81,9 @@ object TripArchive {
         val categories = db.lookupDao().getCategories()
         val methods = db.lookupDao().getPaymentMethods()
         val files = mutableListOf<Pair<String, File>>()
-        fun attach(path: String?, folder: String): String? {
-            if (!includePhotos || path == null) return null
+        // Plan pictures (screenshots) always travel; expense photos and covers only when asked for.
+        fun attach(path: String?, folder: String, always: Boolean = false): String? {
+            if ((!includePhotos && !always) || path == null) return null
             val f = File(path)
             if (!f.isFile) return null
             val name = "files/$folder/${files.size}-${f.name}"
@@ -115,7 +119,7 @@ object TripArchive {
                 put("rates", JSONArray(db.tripDao().getRates(id).map { r ->
                     JSONObject().put("currency", r.currency).put("rate", r.rate).put("updatedAt", r.updatedAt).put("source", r.source)
                 }))
-                put("plans", JSONArray(plans.map { p -> planJson(p, categories) }))
+                put("plans", JSONArray(plans.map { p -> planJson(db, p, categories, ::attach) }))
                 put("dayNotes", JSONArray(db.dayNoteDao().forTrip(id).map { n -> JSONObject().put("day", n.day).put("text", n.text).put("updatedAt", n.updatedAt) }))
                 put("expenses", JSONArray(expenses.map { e ->
                     expenseJson(db, e, categories, methods, plans, ::attach).apply {
@@ -174,6 +178,7 @@ object TripArchive {
         val folder = when {
             name.startsWith("files/covers/") -> "covers"
             name.startsWith("files/receipts/") -> "photos/receipts"
+            name.startsWith("files/plans/") -> "photos/plans"
             else -> "photos/memories"
         }
         val dir = File(filesDir, folder).apply { mkdirs() }
@@ -182,7 +187,12 @@ object TripArchive {
         return dst.absolutePath
     }
 
-    private fun planJson(p: PlanItem, categories: List<Category>) = JSONObject().apply {
+    private suspend fun planJson(
+        db: AppDatabase, p: PlanItem, categories: List<Category>, attach: (String?, String, Boolean) -> String?,
+    ) = JSONObject().apply {
+        put("photos", JSONArray(db.planPhotoDao().forPlan(p.id).mapNotNull { ph ->
+            attach(ph.path, "plans", true)?.let { name -> JSONObject().put("file", name).put("width", ph.width).put("height", ph.height).put("createdAt", ph.createdAt) }
+        }))
         put("uuid", p.uuid)
         put("title", p.title)
         putOpt("category", categories.firstOrNull { it.id == p.categoryId }?.name)
@@ -285,6 +295,7 @@ object TripArchive {
         val manifest = openManifest(zip)
         val kind = manifest.optString("kind", KIND_BACKUP)
         if (kind == KIND_ADDITIONS) throw BadArchive("這是同伴的補充檔,請用審核畫面加入")
+        if (kind == KIND_PLANS) throw BadArchive("這是電腦行程檔,請用併入行程畫面")
         val data = readJson(zip, "data.json")
         val trips = data.getJSONArray("trips")
 
@@ -316,6 +327,11 @@ object TripArchive {
                 val ex = t.getJSONArray("expenses")
                 for (j in 0 until ex.length()) {
                     val photos = ex.getJSONObject(j).optJSONArray("photos") ?: continue
+                    for (k in 0 until photos.length()) fileFor(photos.getJSONObject(k).getString("file"))
+                }
+                val pl = t.getJSONArray("plans")
+                for (j in 0 until pl.length()) {
+                    val photos = pl.getJSONObject(j).optJSONArray("photos") ?: continue
                     for (k in 0 until photos.length()) fileFor(photos.getJSONObject(k).getString("file"))
                 }
             }
@@ -351,12 +367,14 @@ object TripArchive {
                         existing.coverPath?.let(oldFiles::add)
                         if (kind == KIND_TRIP) {
                             oldFiles += db.photoDao().pathsForOfficial(existing.id)
+                            oldFiles += db.planPhotoDao().pathsForOfficial(existing.id)
                             val planUuids = db.planDao().forTrip(existing.id).associate { it.id to it.uuid }
                             myLinks = db.expenseDao().forTrip(existing.id).filter { it.pending && it.planItemId != null }
                                 .associate { it.id to planUuids[it.planItemId] }
                             db.tripDao().clearContents(existing.id)
                         } else {
                             oldFiles += db.photoDao().pathsForTrip(existing.id)
+                            oldFiles += db.planPhotoDao().pathsForTrip(existing.id)
                             db.tripDao().clearAll(existing.id)
                         }
                         db.tripDao().updateTrip(trip)
@@ -431,7 +449,7 @@ object TripArchive {
         val plans = t.getJSONArray("plans")
         val planIds = (0 until plans.length()).map { i ->
             val p = plans.getJSONObject(i)
-            db.planDao().insert(
+            val planId = db.planDao().insert(
                 PlanItem(
                     tripId = tripId,
                     title = p.getString("title"),
@@ -450,6 +468,14 @@ object TripArchive {
                     pending = keepPending && p.optBoolean("pending"),
                 )
             )
+            p.optJSONArray("photos")?.let { photos ->
+                for (k in 0 until photos.length()) {
+                    val ph = photos.getJSONObject(k)
+                    val path = copied[ph.getString("file")] ?: continue
+                    db.planPhotoDao().insert(PlanPhoto(planItemId = planId, path = path, width = ph.optInt("width"), height = ph.optInt("height"), createdAt = ph.optLong("createdAt")))
+                }
+            }
+            planId
         }
         val planByUuid = earlierPlans + (0 until plans.length()).associate { i -> plans.getJSONObject(i).optString("uuid") to planIds[i] }
         val expenses = t.getJSONArray("expenses")
@@ -505,7 +531,10 @@ object TripArchive {
             gone += db.photoDao().forExpense(e.id).map { it.path }
             db.expenseDao().delete(e.id)
         }
-        for (p in db.planDao().forTrip(tripId).filter { it.pending && it.uuid in officialPlans }) db.planDao().deleteRow(p.id)
+        for (p in db.planDao().forTrip(tripId).filter { it.pending && it.uuid in officialPlans }) {
+            gone += db.planPhotoDao().forPlan(p.id).map { it.path }
+            db.planDao().deleteRow(p.id)
+        }
         val planIds = db.planDao().forTrip(tripId).filter { !it.pending || it.uuid !in officialPlans }.associate { it.uuid to it.id }
         for ((expenseId, planUuid) in myLinks) {
             if (db.expenseDao().get(expenseId) != null) db.expenseDao().setPlan(expenseId, planUuid?.let(planIds::get))
@@ -547,8 +576,9 @@ object TripArchive {
         val plans = allPlans.filter { it.pending }
         val expenses = db.expenseDao().forTrip(tripId).filter { it.pending }
         val files = mutableListOf<Pair<String, File>>()
-        fun attach(path: String?, folder: String): String? {
-            if (!includePhotos || path == null) return null
+        // Plan pictures (screenshots) always travel; expense photos and covers only when asked for.
+        fun attach(path: String?, folder: String, always: Boolean = false): String? {
+            if ((!includePhotos && !always) || path == null) return null
             val f = File(path)
             if (!f.isFile) return null
             return "files/$folder/${files.size}-${f.name}".also { files += it to f }
@@ -559,7 +589,7 @@ object TripArchive {
                 JSONObject().put("name", c.name).put("sortOrder", c.sortOrder).put("icon", c.icon).put("color", c.color)
             }))
             put("payments", JSONArray(methods.map { m -> JSONObject().put("name", m.name).put("sortOrder", m.sortOrder) }))
-            put("plans", JSONArray(plans.map { planJson(it, categories).apply { put("addedBy", from); remove("pending") } }))
+            put("plans", JSONArray(plans.map { planJson(db, it, categories, ::attach).apply { put("addedBy", from); remove("pending") } }))
             put("expenses", JSONArray(expenses.map { expenseJson(db, it, categories, methods, allPlans, ::attach).apply { put("addedBy", from); remove("pending") } }))
         }
         val manifest = JSONObject().apply {
@@ -634,6 +664,13 @@ object TripArchive {
                     .filter { it.getString("uuid") in accepted && it.getString("uuid") !in haveExpenses }
 
                 val copied = mutableMapOf<String, String>()
+                for (p in plans) {
+                    val photos = p.optJSONArray("photos") ?: continue
+                    for (k in 0 until photos.length()) {
+                        val name = photos.getJSONObject(k).getString("file")
+                        copyEntry(zip, name, filesDir)?.let { copied[name] = it }
+                    }
+                }
                 for (e in expenses) {
                     val photos = e.optJSONArray("photos") ?: continue
                     for (k in 0 until photos.length()) {
@@ -661,6 +698,131 @@ object TripArchive {
                     throw e
                 }
                 Result.Imported(KIND_ADDITIONS, listOf(trip.id), plans.size + expenses.size)
+            }
+        } catch (e: BadArchive) {
+            Result.Failed(e.message ?: "無法讀取檔案")
+        } catch (e: Exception) {
+            Result.Failed("檔案損壞,無法匯入")
+        }
+    }
+
+    // ───────────────────────────── plans from the desktop planner ─────────────────────────────
+
+    /** What merging a desktop plans file will do, for the confirmation dialog. */
+    data class PlansPreview(
+        val tripName: String, val newTrip: Boolean, val added: Int, val updated: Int, val deleted: Int,
+        /** Set when the file cannot go into this phone (someone else's shared trip). */
+        val refused: String? = null,
+    )
+
+    private fun plansOf(data: JSONObject) = data.getJSONArray("plans").let { a -> (0 until a.length()).map { a.getJSONObject(it) } }
+    private fun deletedOf(data: JSONObject) = data.optJSONArray("deleted")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList()
+
+    suspend fun previewPlans(db: AppDatabase, file: File): PlansPreview = withContext(Dispatchers.IO) {
+        ZipFile(file).use { zip ->
+            openManifest(zip)
+            val data = readJson(zip, "data.json")
+            val t = data.getJSONObject("trip")
+            val trip = db.tripDao().findByUuid(t.getString("uuid"))
+            if (trip?.readOnly == true) {
+                return@withContext PlansPreview(trip.name, false, 0, 0, 0, "「${trip.name}」是${trip.sharedBy}記帳的旅程,請把這個檔案傳給${trip.sharedBy}")
+            }
+            val have = trip?.let { db.planDao().uuids(it.id).toSet() } ?: emptySet()
+            val incoming = plansOf(data).map { it.getString("uuid") }
+            PlansPreview(
+                trip?.name ?: t.getString("name"), trip == null,
+                added = incoming.count { it !in have }, updated = incoming.count { it in have },
+                deleted = deletedOf(data).count { it in have },
+            )
+        }
+    }
+
+    /**
+     * Merges a desktop plans file into this phone: the trip is matched by identity (and created if the phone does
+     * not have it yet); each plan item is updated or added by its identity, items deleted on the desktop are
+     * deleted here, and the desktop's day notes replace these days' notes. Expenses are never touched.
+     */
+    suspend fun importPlans(db: AppDatabase, file: File, filesDir: File): Result = withContext(Dispatchers.IO) {
+        try {
+            ZipFile(file).use { zip ->
+                val m = openManifest(zip)
+                if (m.optString("kind") != KIND_PLANS) throw BadArchive("這不是電腦行程檔")
+                val data = readJson(zip, "data.json")
+                val t = data.getJSONObject("trip")
+                val existing = db.tripDao().findByUuid(t.getString("uuid"))
+                if (existing?.readOnly == true) throw BadArchive("「${existing.name}」是${existing.sharedBy}記帳的旅程,請把這個檔案傳給${existing.sharedBy}")
+                val plans = plansOf(data)
+                val copied = mutableMapOf<String, String>()
+                for (p in plans) {
+                    val photos = p.optJSONArray("photos") ?: continue
+                    for (k in 0 until photos.length()) {
+                        val name = photos.getJSONObject(k).getString("file")
+                        copyEntry(zip, name, filesDir)?.let { copied[name] = it }
+                    }
+                }
+                val oldFiles = mutableListOf<String>()
+                var changed = 0
+                val tripId = try {
+                    db.withTransaction {
+                        val categoryIds = mergeCategories(db, data.optJSONArray("categories"))
+                        val id = existing?.id ?: db.tripDao().insertTrip(
+                            Trip(
+                                name = t.getString("name"), startDate = t.getLong("startDate"), endDate = t.getLong("endDate"),
+                                uuid = t.getString("uuid"), navApp = t.optStringOrNull("navApp"),
+                            ),
+                        )
+                        for (p in plans) {
+                            val uuid = p.getString("uuid")
+                            val fields = { base: PlanItem ->
+                                base.copy(
+                                    title = p.getString("title"),
+                                    categoryId = p.optStringOrNull("category")?.let(categoryIds::get),
+                                    date = p.optLongOrNull("date"),
+                                    minuteOfDay = p.optLongOrNull("minuteOfDay")?.toInt(),
+                                    status = p.optString("status", "TODO"),
+                                    reservation = p.optString("reservation", "NONE"),
+                                    reservationNote = p.optString("reservationNote"),
+                                    location = p.optString("location"),
+                                    note = p.optString("note"),
+                                )
+                            }
+                            val current = db.planDao().findByUuid(id, uuid)
+                            val planId = if (current != null) {
+                                db.planDao().update(fields(current))
+                                db.planPhotoDao().forPlan(current.id).forEach { ph -> oldFiles += ph.path; db.planPhotoDao().delete(ph.id) }
+                                current.id
+                            } else {
+                                db.planDao().insert(fields(PlanItem(tripId = id, title = "", uuid = uuid, createdAt = p.optLong("createdAt", System.currentTimeMillis()))))
+                            }
+                            p.optJSONArray("photos")?.let { photos ->
+                                for (k in 0 until photos.length()) {
+                                    val ph = photos.getJSONObject(k)
+                                    val path = copied[ph.getString("file")] ?: continue
+                                    db.planPhotoDao().insert(PlanPhoto(planItemId = planId, path = path, width = ph.optInt("width"), height = ph.optInt("height")))
+                                }
+                            }
+                            changed++
+                        }
+                        for (uuid in deletedOf(data)) {
+                            val gone = db.planDao().findByUuid(id, uuid) ?: continue
+                            oldFiles += db.planPhotoDao().forPlan(gone.id).map { it.path }
+                            db.planDao().delete(gone.id)
+                            changed++
+                        }
+                        data.optJSONArray("dayNotes")?.let { a ->
+                            for (i in 0 until a.length()) {
+                                val n = a.getJSONObject(i)
+                                db.dayNoteDao().set(id, n.getLong("day"), n.optString("text"))
+                            }
+                        }
+                        id
+                    }
+                } catch (e: Exception) {
+                    copied.values.forEach { File(it).delete() }
+                    throw e
+                }
+                oldFiles.forEach { File(it).delete() }
+                Result.Imported(KIND_PLANS, listOf(tripId), changed)
             }
         } catch (e: BadArchive) {
             Result.Failed(e.message ?: "無法讀取檔案")

@@ -43,6 +43,34 @@ object CoverStore {
     }
 }
 
+/** A picture on a plan item; [id] is null until the item is saved. */
+data class PlanPicture(val id: Long?, val path: String, val width: Int = 0, val height: Int = 0)
+
+/** Screenshots and pictures kept with plan items, downscaled into photos/plans. */
+object PlanPictures {
+    private const val MAX_EDGE = 1600
+
+    suspend fun import(context: Context, uri: Uri): PlanPicture? = withContext(Dispatchers.IO) {
+        runCatching {
+            val source = ImageDecoder.createSource(context.contentResolver, uri)
+            val bitmap = ImageDecoder.decodeBitmap(source) { decoder, info, _ ->
+                val scale = minOf(1f, MAX_EDGE.toFloat() / maxOf(info.size.width, info.size.height))
+                decoder.setTargetSize((info.size.width * scale).toInt().coerceAtLeast(1), (info.size.height * scale).toInt().coerceAtLeast(1))
+                decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
+            }
+            val dir = File(context.filesDir, "photos/plans").apply { mkdirs() }
+            val file = File(dir, "${UUID.randomUUID()}.jpg")
+            file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 82, it) }
+            PlanPicture(null, file.absolutePath, bitmap.width, bitmap.height)
+        }.getOrNull()
+    }
+
+    fun delete(path: String) {
+        runCatching { File(path).delete() }
+        ImageCache.remove(path)
+    }
+}
+
 private object ImageCache : LruCache<String, ImageBitmap>(24)
 
 /** Loads a local image file off the main thread, sampled down to roughly [targetPx] wide. */

@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>卡溜趴行程桌</title>
+<style>/*STYLE*/</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand"><b>卡溜趴行程桌</b><span class="sig">ArchieKUO</span><small>v/*VERSION*/</small></div>
+    <select id="trip-select" aria-label="旅程"></select>
+    <button class="btn" id="btn-settings" title="改名、改日期">旅程設定</button>
+    <button class="btn" id="btn-new">＋ 新增旅程</button>
+    <span class="spacer"></span>
+    <button class="icon-btn" id="btn-smaller" title="字小一點">A−</button>
+    <button class="icon-btn" id="btn-bigger" title="字大一點">A＋</button>
+    <label class="btn" title="讀入手機傳來的旅程檔">打開手機檔案<input type="file" id="file-input" accept=".zip,application/zip" hidden></label>
+    <button class="btn primary" id="btn-export">傳到手機</button>
+  </header>
+  <div class="hint" id="hint"></div>
+  <main class="board" id="board"></main>
+</div>
+<script>/*PARSER*/</script>
+<script>/*ZIP*/</script>
+<script>/*APP*/</script>
+</body>
+</html>

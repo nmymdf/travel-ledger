@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>卡溜趴行程桌</title>
+<style>:root {
+  --bg: #f5f6fa; --card: #ffffff; --ink: #15161c; --muted: #6b6e80; --faint: #9a9dad; --line: #e3e5ee;
+  --primary: #5b57f2; --primary-ink: #ffffff; --primary-soft: #ecebff; --danger: #e5484d; --success: #1f9d55;
+  --note: #fff6e5; --note-ink: #8a5a00; --shadow: 0 1px 2px rgba(20, 20, 60, .06), 0 4px 14px rgba(20, 20, 60, .05);
+  --fs: 17px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0d11; --card: #17181e; --ink: #edeef3; --muted: #9a9dad; --faint: #6b6e80; --line: #2a2b33;
+    --primary: #8d8aff; --primary-ink: #16134a; --primary-soft: #2b2967; --note: #2d2414; --note-ink: #f2c46b;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4);
+  }
+}
+* { box-sizing: border-box; }
+html { font-size: var(--fs); }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", system-ui, sans-serif; line-height: 1.45;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: var(--primary); }
+
+/* ── top bar ── */
+.top {
+  position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: .6rem; align-items: center;
+  padding: .7rem 1rem; background: var(--card); border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: baseline; gap: .5rem; margin-right: .5rem; }
+.brand b { font-size: 1.3rem; }
+.brand .sig { font-family: Georgia, serif; font-style: italic; font-weight: 600; color: #b8901f; font-size: .95rem; }
+.brand small { color: var(--faint); }
+.top select { padding: .45rem .7rem; border-radius: .7rem; border: 1px solid var(--line); background: var(--bg); max-width: 22rem; }
+.spacer { flex: 1; }
+.btn {
+  border: 1px solid var(--line); background: var(--card); padding: .45rem .9rem; border-radius: 999px;
+  display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap;
+}
+.btn:hover { border-color: var(--primary); }
+.btn:disabled, select:disabled { opacity: .45; cursor: default; }
+.btn.primary { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+.btn.danger { color: var(--danger); }
+.btn.small { padding: .25rem .65rem; font-size: .9rem; }
+.icon-btn { border: none; background: none; padding: .3rem .45rem; border-radius: .5rem; color: var(--muted); }
+.icon-btn:hover { background: var(--bg); color: var(--ink); }
+
+/* ── board ── */
+.hint { color: var(--muted); padding: .5rem 1rem 0; font-size: .92rem; }
+.board { display: flex; gap: .9rem; align-items: flex-start; padding: 1rem; overflow-x: auto; min-height: calc(100vh - 7rem); }
+.col {
+  flex: 0 0 17rem; background: color-mix(in srgb, var(--card) 55%, var(--bg)); border: 1px solid var(--line);
+  border-radius: 1rem; padding: .7rem; display: flex; flex-direction: column; gap: .55rem;
+}
+.col.selected { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-soft); }
+.col.over { background: var(--primary-soft); }
+.col-head { display: flex; align-items: baseline; gap: .4rem; padding: 0 .2rem; }
+.col-head .day { color: var(--primary); font-weight: 700; }
+.col-head .date { font-weight: 600; }
+.col-head .count { margin-left: auto; color: var(--faint); font-size: .85rem; }
+.daynote {
+  background: var(--note); color: var(--ink); border-radius: .7rem; padding: .5rem .65rem; font-size: .92rem;
+  white-space: pre-wrap; word-break: break-word; cursor: text;
+}
+.daynote .label { color: var(--note-ink); font-weight: 700; font-size: .8rem; display: block; }
+.daynote.empty { background: none; color: var(--faint); padding: .1rem .2rem; }
+.daynote textarea { width: 100%; min-height: 5rem; border: none; background: none; resize: vertical; outline: none; }
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: .8rem; padding: .55rem .65rem;
+  box-shadow: var(--shadow); cursor: grab; display: flex; gap: .5rem; align-items: flex-start;
+}
+.card:hover { border-color: var(--primary); }
+.card.dragging { opacity: .4; }
+.card.done .title { text-decoration: line-through; color: var(--muted); }
+.card .cat { flex: 0 0 auto; width: 1.9rem; height: 1.9rem; border-radius: .55rem; display: grid; place-items: center; font-size: 1rem; }
+.card .body { min-width: 0; flex: 1; }
+.card .time { color: var(--primary); font-weight: 700; font-size: .9rem; }
+.card .title { font-weight: 600; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tags { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: .25rem; }
+.tag { font-size: .75rem; padding: .05rem .45rem; border-radius: 999px; background: var(--bg); color: var(--muted); }
+.tag.red { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.tag.green { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+.add { display: flex; gap: .4rem; }
+.add textarea {
+  flex: 1; border: 1px dashed var(--line); border-radius: .7rem; padding: .45rem .6rem; background: var(--card);
+  resize: none; height: 2.4rem; overflow: hidden;
+}
+.add textarea:focus { border-style: solid; border-color: var(--primary); outline: none; height: 4.5rem; overflow: auto; }
+
+/* ── editor drawer ── */
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(30rem, 100vw); background: var(--card); z-index: 20;
+  border-left: 1px solid var(--line); box-shadow: -8px 0 30px rgba(0, 0, 0, .12); display: flex; flex-direction: column;
+}
+.drawer header { display: flex; align-items: center; gap: .5rem; padding: .8rem 1rem; border-bottom: 1px solid var(--line); }
+.drawer header b { flex: 1; font-size: 1.1rem; }
+.drawer .scroll { overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .8rem; }
+.field label { display: block; font-size: .82rem; color: var(--muted); margin-bottom: .2rem; }
+.field input, .field select, .field textarea {
+  width: 100%; border: 1px solid var(--line); border-radius: .65rem; padding: .5rem .65rem; background: var(--bg);
+}
+.field textarea { resize: vertical; }
+.row { display: flex; gap: .6rem; }
+.row > .field { flex: 1; }
+.links { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .35rem; }
+.pics { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+.pic { position: relative; aspect-ratio: 1; border-radius: .6rem; overflow: hidden; background: var(--bg); cursor: zoom-in; }
+.pic img { width: 100%; height: 100%; object-fit: cover; }
+.pic button { position: absolute; top: .25rem; right: .25rem; background: rgba(0, 0, 0, .55); color: #fff; border: none; border-radius: 999px; width: 1.6rem; height: 1.6rem; }
+.pic.add { display: grid; place-items: center; border: 1px dashed var(--line); background: none; color: var(--primary); cursor: pointer; text-align: center; font-size: .85rem; }
+
+/* ── dialogs ── */
+.backdrop { position: fixed; inset: 0; background: rgba(10, 10, 20, .45); z-index: 30; display: grid; place-items: center; padding: 1rem; }
+.dialog { background: var(--card); border-radius: 1.1rem; padding: 1.2rem 1.3rem; width: min(36rem, 100%); max-height: 90vh; overflow: auto; }
+.dialog h2 { margin: 0 0 .6rem; font-size: 1.25rem; }
+.dialog p { color: var(--muted); margin: .3rem 0 .8rem; }
+.dialog .actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+.split-row { display: flex; gap: .5rem; align-items: center; padding: .3rem 0; border-bottom: 1px solid var(--line); }
+.split-row input[type=text] { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: .5rem; padding: .3rem .5rem; background: var(--bg); }
+.split-row select, .split-row input[type=time] { border: 1px solid var(--line); border-radius: .5rem; padding: .3rem; background: var(--bg); }
+.lightbox { position: fixed; inset: 0; background: rgba(0, 0, 0, .9); z-index: 40; display: grid; place-items: center; cursor: zoom-out; }
+.lightbox img { max-width: 96vw; max-height: 94vh; }
+.toast {
+  position: fixed; bottom: 1.2rem; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+  padding: .6rem 1rem; border-radius: .8rem; z-index: 50; max-width: 90vw;
+}
+.empty-state { max-width: 40rem; margin: 3rem auto; background: var(--card); border-radius: 1.2rem; padding: 1.5rem 1.8rem; box-shadow: var(--shadow); }
+.empty-state ol { padding-left: 1.3rem; }
+.empty-state li { margin: .35rem 0; }
+.drop-cover {
+  position: fixed; inset: 0; z-index: 60; background: color-mix(in srgb, var(--primary) 18%, transparent);
+  display: grid; place-items: center; font-size: 1.4rem; font-weight: 700; color: var(--primary); pointer-events: none;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="brand"><b>卡溜趴行程桌</b><span class="sig">ArchieKUO</span><small>v1.0</small></div>
+    <select id="trip-select" aria-label="旅程"></select>
+    <button class="btn" id="btn-settings" title="改名、改日期">旅程設定</button>
+    <button class="btn" id="btn-new">＋ 新增旅程</button>
+    <span class="spacer"></span>
+    <button class="icon-btn" id="btn-smaller" title="字小一點">A−</button>
+    <button class="icon-btn" id="btn-bigger" title="字大一點">A＋</button>
+    <label class="btn" title="讀入手機傳來的旅程檔">打開手機檔案<input type="file" id="file-input" accept=".zip,application/zip" hidden></label>
+    <button class="btn primary" id="btn-export">傳到手機</button>
+  </header>
+  <div class="hint" id="hint"></div>
+  <main class="board" id="board"></main>
+</div>
+<script>// Plan parsing for the desktop planner — a line-for-line port of the phone's logic/PlanParser.kt,
+// so pasted notes split and classify the same way on both. desktop/test/parser.test.mjs keeps them in step.
+const PlanParser = (() => {
+  const urlRegex = /https?:\/\/\S+/;
+  const urlRegexG = /https?:\/\/\S+/g;
+
+  // Keyword → category name. First match wins, so lodging ("飯店") goes before food ("飯").
+  const hints = [
+    ["住宿", ["飯店", "酒店", "旅館", "民宿", "ホテル", "Hotel", "hotel", "Inn", "check-in", "入住", "退房", "住宿"]],
+    ["交通", ["機場", "空港", "車站", "駅", "新幹線", "JR", "巴士", "バス", "租車", "Airport", "Station", "地鐵", "捷運", "KTX", "高鐵", "計程車", "轉乘", "接駁", "AREX"]],
+    ["吃", [
+      "早餐", "午餐", "晚餐", "宵夜", "下午茶", "拉麵", "ラーメン", "壽司", "寿司", "燒肉", "焼肉", "烤肉", "炸雞", "蔘雞湯", "部隊鍋", "冷麵",
+      "火鍋", "牛舌", "餃子", "小吃", "餐", "食堂", "居酒屋", "咖哩", "カレー", "麵", "うどん", "そば", "丼", "飯", "料理", "甜點", "スイーツ",
+      "パン", "麵包", "Cafe", "cafe", "咖啡", "茶", "Restaurant", "restaurant",
+    ]],
+    ["購物", ["百貨", "商場", "Outlet", "outlet", "唐吉訶德", "ドン・キホーテ", "藥妝", "超市", "市場", "商店街", "Mall", "購物", "免稅", "伴手禮", "Olive Young"]],
+    ["景點", [
+      "寺", "神社", "宮", "城", "塔", "公園", "博物館", "美術館", "展望", "水族館", "動物園", "樂園", "ランド", "山", "海", "湖", "島", "橋",
+      "老街", "夜市", "壁畫村", "韓屋", "韓服", "Temple", "Park", "Museum", "Tower", "Shrine", "Palace",
+    ]],
+  ];
+
+  const tagNames = {
+    "交通": "交通", "移動": "交通", "吃": "吃", "餐": "吃", "美食": "吃", "餐廳": "吃", "早餐": "吃", "午餐": "吃", "晚餐": "吃",
+    "住宿": "住宿", "住": "住宿", "飯店": "住宿", "購物": "購物", "買": "購物", "逛街": "購物", "景點": "景點", "玩": "景點", "參觀": "景點",
+  };
+  const bracketTag = /[【\[(（〔]\s*([^】\])）〕]{1,4})\s*[】\])）〕]\s*[:：]?/;
+  const prefixTag = /^\s*(交通|移動|住宿|購物|景點|美食|餐廳|早餐|午餐|晚餐)\s*[:：]/;
+  const emojiTags = [
+    ["交通", ["🚇", "🚌", "🚕", "🚆", "🚄", "✈", "🚶", "🚗", "🚉"]],
+    ["吃", ["🍜", "🍣", "🍖", "🍗", "🍲", "🍚", "☕", "🍰", "🍺", "🍴", "🍽"]],
+    ["住宿", ["🏨", "🛏"]],
+    ["購物", ["🛍", "🛒"]],
+    ["景點", ["📷", "📸", "🏯", "⛩", "🏞"]],
+  ];
+  const travelVerbs = /^(?:搭乘|搭|坐|轉乘|轉搭|步行|走路|前往|移動|開車|騎)|(?:搭乘|轉乘|步行約|走路約|車程|下車|上車|直達)/;
+
+  const removeRange = (text, m) => (text.slice(0, m.index) + text.slice(m.index + m[0].length)).trim();
+
+  /** The category the text names itself (tag, prefix or emoji), and the text without that marker. */
+  function explicitCategory(text) {
+    let m = bracketTag.exec(text);
+    if (m && tagNames[m[1].trim()]) return [tagNames[m[1].trim()], removeRange(text, m)];
+    m = prefixTag.exec(text);
+    if (m && tagNames[m[1]]) return [tagNames[m[1]], removeRange(text, m)];
+    for (const [cat, marks] of emojiTags) if (marks.some((x) => text.includes(x))) return [cat, text];
+    return null;
+  }
+
+  function guessCategory(text) {
+    const tagged = explicitCategory(text);
+    if (tagged) return tagged[0];
+    if (travelVerbs.test(text.trim())) return "交通";
+    for (const [cat, words] of hints) if (words.some((w) => text.includes(w))) return cat;
+    return null;
+  }
+
+  const headerLine = /^\s*(?:day\s*\d+|d\d+|第\s*[一二三四五六七八九十\d]+\s*天)\s*[:：]?\s*$/i;
+  const clock = /(?<!\d)([01]?\d|2[0-3])\s*[:：]\s*([0-5]\d)(?!\d)/;
+  const clockG = /(?<!\d)([01]?\d|2[0-3])\s*[:：]\s*([0-5]\d)(?!\d)/g;
+  const hourWord = /(?<!\d)([01]?\d|2[0-3])\s*點\s*(半|\d{1,2}\s*分)?/;
+  const hourWordG = /(?<!\d)([01]?\d|2[0-3])\s*點\s*(半|\d{1,2}\s*分)?/g;
+  const periods = [
+    ["早上", 9 * 60], ["上午", 9 * 60], ["早餐", 8 * 60], ["中午", 12 * 60], ["午餐", 12 * 60], ["下午茶", 15 * 60], ["下午", 14 * 60],
+    ["傍晚", 17 * 60], ["晚餐", 18 * 60], ["晚上", 18 * 60], ["宵夜", 21 * 60],
+  ];
+  const mealWords = new Set(["早餐", "午餐", "晚餐", "下午茶", "宵夜"]);
+  const separators = /\s*(?:→|➡|->|⇒|>)\s*/;
+  const bullet = /^\s*(?:[-*•・●○◎▶►✓✔☐□]|\d{1,3}[.、)):]|[(\(]\d{1,3}[)\)])\s*/;
+  const lines = (t) => t.split(/\r\n|\n|\r/);
+  const trimChars = (s, chars) => {
+    let a = 0, b = s.length;
+    while (a < b && chars.includes(s[a])) a++;
+    while (b > a && chars.includes(s[b - 1])) b--;
+    return s.slice(a, b);
+  };
+  const edge = ["-", "—", ":", "：", ",", "，", "、", "～", "~", "。", " "];
+
+  /** The time written in text (09:30, 3點半, 下午3點, 晚上…), in minutes after midnight, or null. */
+  function findTime(text) {
+    const afternoon = text.includes("下午") || text.includes("晚上") || text.includes("傍晚");
+    let m = clock.exec(text);
+    if (m) {
+      const h = +m[1];
+      return (afternoon && h < 12 ? h + 12 : h) * 60 + +m[2];
+    }
+    m = hourWord.exec(text);
+    if (m) {
+      const h = +m[1];
+      const min = m[2] === "半" ? 30 : m[2] ? +m[2].replace(/\D/g, "") : 0;
+      return (afternoon && h < 12 ? h + 12 : h) * 60 + min;
+    }
+    for (const [w, t] of periods) if (text.includes(w)) return t;
+    return null;
+  }
+
+  /** A day's notes split into plan items, exactly as on the phone (see PlanParser.splitNote). */
+  function splitNote(text) {
+    const out = [];
+    for (const raw of lines(text)) {
+      if (!raw.trim() || headerLine.test(raw)) continue;
+      const urlMatch = urlRegex.exec(raw);
+      const lineUrl = urlMatch ? urlMatch[0] : null;
+      const rest = raw.replace(urlRegexG, " ").trim();
+      if (!rest && lineUrl) {
+        if (out.length && !out[out.length - 1].location) out[out.length - 1].location = lineUrl;
+        else out.push({ title: "地圖地點", location: lineUrl, category: null, minuteOfDay: null });
+        continue;
+      }
+      const lineTime = findTime(rest);
+      const steps = rest.split(separators).filter((s) => s.trim());
+      steps.forEach((step, i) => {
+        const time = findTime(step) ?? (i === 0 ? lineTime : null);
+        let title = step.replace(clockG, " ").replace(hourWordG, " ").replace(bullet, "");
+        for (const [w] of periods) if (!mealWords.has(w)) title = title.split(w).join(" ");
+        title = trimChars(title.replace(/\s+/g, " ").trim(), edge);
+        const tagged = explicitCategory(title);
+        const clean = trimChars((tagged ? tagged[1] : title).trim(), edge);
+        if (!clean) return;
+        out.push({
+          title: clean, location: i === 0 ? lineUrl || "" : "",
+          category: tagged ? tagged[0] : guessCategory(clean) ?? guessCategory(step), minuteOfDay: time,
+        });
+      });
+    }
+    return out;
+  }
+
+  /** The place name inside a Google Maps link (…/maps/place/明洞餃子+本店/@…), or null. */
+  function nameFromMapsUrl(url) {
+    const m = /\/maps\/place\/([^/@?]+)/.exec(url);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1].replace(/\+/g, " ")).trim() || null; } catch { return null; }
+  }
+
+  /** Text dropped or pasted from a map app: "店名\nhttps://maps.app.goo.gl/…" or just a link. */
+  function parseShare(text) {
+    const urlMatch = urlRegex.exec(text);
+    const url = urlMatch ? urlMatch[0] : "";
+    const first = lines(text.replace(urlRegexG, "\n")).map((l) => l.trim()).find((l) => l) || (url && nameFromMapsUrl(url)) || "";
+    let name = first;
+    const cut = [...name].findIndex((c) => c === "," || c === "，");
+    if (cut > 0 && /\d/.test(name.slice(cut))) name = name.slice(0, cut).trim();
+    return { title: name || "地圖地點", location: url || (name ? "" : text.trim()), category: guessCategory(name), minuteOfDay: null };
+  }
+
+  return { explicitCategory, guessCategory, findTime, splitNote, parseShare, nameFromMapsUrl };
+})();
+if (typeof module !== "undefined") module.exports = PlanParser;
+</script>
+<script>// Minimal zip reading and writing for 卡溜趴 files, with no libraries so the page works offline.
+// Reading handles the phone's deflated entries through the browser's DecompressionStream;
+// writing stores entries uncompressed (the pictures are JPEG already), which every unzip — and the phone — reads.
+const Zip = (() => {
+  const CRC_TABLE = (() => {
+    const t = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+      let c = n;
+      for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    let c = 0xffffffff;
+    for (let i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  }
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+
+  /** entries: [{ name, data: Uint8Array | string }] → Blob of a zip file. */
+  function write(entries) {
+    const parts = [];
+    const central = [];
+    let offset = 0;
+    for (const e of entries) {
+      const name = enc.encode(e.name);
+      const data = typeof e.data === "string" ? enc.encode(e.data) : e.data;
+      const crc = crc32(data);
+      const local = new DataView(new ArrayBuffer(30));
+      local.setUint32(0, 0x04034b50, true);
+      local.setUint16(4, 20, true);
+      local.setUint16(6, 0x0800, true); // UTF-8 names
+      local.setUint16(8, 0, true); // stored
+      local.setUint32(14, crc, true);
+      local.setUint32(18, data.length, true);
+      local.setUint32(22, data.length, true);
+      local.setUint16(26, name.length, true);
+      parts.push(local.buffer, name, data);
+      const cd = new DataView(new ArrayBuffer(46));
+      cd.setUint32(0, 0x02014b50, true);
+      cd.setUint16(4, 20, true);
+      cd.setUint16(6, 20, true);
+      cd.setUint16(8, 0x0800, true);
+      cd.setUint16(10, 0, true);
+      cd.setUint32(16, crc, true);
+      cd.setUint32(20, data.length, true);
+      cd.setUint32(24, data.length, true);
+      cd.setUint16(28, name.length, true);
+      cd.setUint32(42, offset, true);
+      central.push(cd.buffer, name);
+      offset += 30 + name.length + data.length;
+    }
+    const cdSize = central.reduce((n, p) => n + (p.byteLength ?? p.length), 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true);
+    end.setUint16(8, entries.length, true);
+    end.setUint16(10, entries.length, true);
+    end.setUint32(12, cdSize, true);
+    end.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, end.buffer], { type: "application/zip" });
+  }
+
+  async function inflateRaw(bytes) {
+    const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+    return new Uint8Array(await new Response(stream).arrayBuffer());
+  }
+
+  /** A zip (ArrayBuffer) → Map of name → Uint8Array, read through the central directory. */
+  async function read(buffer) {
+    const view = new DataView(buffer);
+    const bytes = new Uint8Array(buffer);
+    let eocd = -1;
+    for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) {
+      if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+    }
+    if (eocd < 0) throw new Error("not a zip");
+    const count = view.getUint16(eocd + 10, true);
+    let p = view.getUint32(eocd + 16, true);
+    const files = new Map();
+    for (let i = 0; i < count; i++) {
+      if (view.getUint32(p, true) !== 0x02014b50) throw new Error("bad zip");
+      const method = view.getUint16(p + 10, true);
+      const size = view.getUint32(p + 20, true);
+      const nameLen = view.getUint16(p + 28, true);
+      const extraLen = view.getUint16(p + 30, true);
+      const commentLen = view.getUint16(p + 32, true);
+      const localAt = view.getUint32(p + 42, true);
+      const name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+      const dataAt = localAt + 30 + view.getUint16(localAt + 26, true) + view.getUint16(localAt + 28, true);
+      const raw = bytes.subarray(dataAt, dataAt + size);
+      if (!name.endsWith("/")) files.set(name, method === 0 ? raw.slice() : await inflateRaw(raw));
+      p += 46 + nameLen + extraLen + commentLen;
+    }
+    return files;
+  }
+
+  return { write, read, text: (u8) => dec.decode(u8) };
+})();
+if (typeof module !== "undefined") module.exports = Zip;
+</script>
+<script>// 卡溜趴行程桌 — plan trips on a computer, then send them to the phone as a file.
+// Everything stays in this browser (IndexedDB); files move between the computer and the phone through LINE or similar.
+(() => {
+  const APP_VERSION = "1.0";
+  const FORMAT = "travelledger";
+  const DEFAULT_CATEGORIES = ["吃", "交通", "購物", "住宿", "景點", "其他"];
+  const CATEGORY_LOOK = {
+    "吃": ["#F97316", "🍴"], "交通": ["#3B82F6", "🚇"], "購物": ["#8B5CF6", "🛍"], "住宿": ["#EC4899", "🛏"],
+    "景點": ["#14B8A6", "📷"], "其他": ["#64748B", "•"],
+  };
+  const UNSCHEDULED = null;
+  const $ = (sel, root = document) => root.querySelector(sel);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+  const uuid = () => crypto.randomUUID();
+
+  // ── dates are epoch days, like LocalDate.toEpochDay() on the phone ──
+  const toEpochDay = (iso) => { const [y, m, d] = iso.split("-").map(Number); return Math.round(Date.UTC(y, m - 1, d) / 864e5); };
+  const fromEpochDay = (n) => { const d = new Date(n * 864e5); return { y: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate(), w: d.getUTCDay() }; };
+  const isoOf = (n) => { const x = fromEpochDay(n); return `${x.y}-${String(x.m).padStart(2, "0")}-${String(x.d).padStart(2, "0")}`; };
+  const WEEK = ["日", "一", "二", "三", "四", "五", "六"];
+  const shortDate = (n) => { const x = fromEpochDay(n); return `${x.m}/${x.d}(${WEEK[x.w]})`; };
+  const fmtTime = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const parseTime = (s) => { if (!s) return null; const [h, m] = s.split(":").map(Number); return h * 60 + m; };
+
+  // ── storage ──
+  let db;
+  const idb = (mode, fn) => new Promise((ok, bad) => {
+    const tx = db.transaction("trips", mode);
+    const req = fn(tx.objectStore("trips"));
+    tx.oncomplete = () => ok(req && req.result);
+    tx.onerror = () => bad(tx.error);
+  });
+  const openDb = () => new Promise((ok, bad) => {
+    const r = indexedDB.open("kalupa-planner", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("trips", { keyPath: "uuid" });
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => bad(r.error);
+  });
+
+  const state = { trips: [], current: null, selectedDay: UNSCHEDULED, editing: null, dragging: null };
+  const trip = () => state.trips.find((t) => t.uuid === state.current) || null;
+  let saveTimer = null;
+  function save(t = trip()) {
+    if (!t) return;
+    t.updatedAt = Date.now();
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => idb("readwrite", (s) => s.put(t)), 250);
+  }
+
+  // ── categories ──
+  const categoriesOf = (t) => (t?.categories?.length ? t.categories : DEFAULT_CATEGORIES.map((name) => ({ name })));
+  const look = (name) => CATEGORY_LOOK[name] || ["#64748B", name ? name[0] : "•"];
+
+  // ── pictures: object URLs for blobs ──
+  const urls = new Map();
+  const picUrl = (p) => { if (!urls.has(p.id)) urls.set(p.id, URL.createObjectURL(p.blob)); return urls.get(p.id); };
+  async function toPicture(file) {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", 0.82));
+    return { id: uuid(), blob, width: canvas.width, height: canvas.height };
+  }
+
+  // ── plans ──
+  function newPlan(fields) {
+    return {
+      uuid: uuid(), title: "", category: null, date: UNSCHEDULED, minuteOfDay: null, status: "TODO", reservation: "NONE",
+      reservationNote: "", location: "", note: "", createdAt: Date.now(), photos: [], ...fields,
+    };
+  }
+  const sortPlans = (a, b) => (a.minuteOfDay ?? 1e9) - (b.minuteOfDay ?? 1e9) || a.createdAt - b.createdAt;
+  function addPlans(list, day) {
+    const t = trip();
+    list.forEach((p, i) => t.plans.push(newPlan({ ...p, date: day, createdAt: Date.now() + i })));
+    save();
+    render();
+  }
+  function deletePlan(p) {
+    const t = trip();
+    t.plans = t.plans.filter((x) => x !== p);
+    if (!t.deleted.includes(p.uuid)) t.deleted.push(p.uuid); // so the phone removes it too
+    save();
+  }
+
+  // ── toast ──
+  function toast(msg, ms = 2600) {
+    const el = document.createElement("div");
+    el.className = "toast";
+    el.textContent = msg;
+    document.body.append(el);
+    setTimeout(() => el.remove(), ms);
+  }
+
+  // ── links in text ──
+  const LINK = /(https?:\/\/[^\s()<>"⺀-鿿가-힯＀-￯]+|www\.[^\s()<>"⺀-鿿가-힯＀-￯]+)/g;
+  const linkify = (text) => esc(text).replace(LINK, (u) => `<a href="${u.startsWith("www.") ? "https://" + u : u}" target="_blank" rel="noopener">${u}</a>`);
+  const linksIn = (text) => [...String(text || "").matchAll(LINK)].map((m) => m[0]);
+
+  // ───────────────────────── rendering ─────────────────────────
+  const app = $("#app");
+  function render() {
+    const t = trip();
+    renderTop(t);
+    const board = $("#board");
+    if (!t) {
+      board.innerHTML = `<div class="empty-state">
+        <h2>卡溜趴行程桌</h2>
+        <p>在電腦上排行程,排好傳到手機。這裡只有行程,沒有記帳。</p>
+        <ol>
+          <li>按上方「新增旅程」,或「打開手機檔案」讀入手機傳來的旅程(手機:旅程右上角 ⋮ →「傳到電腦排行程」)。</li>
+          <li>在每一天的欄位輸入行程,或<b>貼上一大段文字</b>自動拆成多個行程;也可以把 Google 地圖的連結或截圖<b>拖進欄位</b>。</li>
+          <li>用滑鼠把行程<b>拖到別天</b>;點行程可以改內容、加截圖。</li>
+          <li>排好按「傳到手機」,存下來的檔案用 LINE 電腦版傳給自己,在手機點開按「併入」。</li>
+        </ol>
+        <p>資料存在這台電腦的瀏覽器裡;不同電腦或瀏覽器之間不會同步。</p>
+      </div>`;
+      $("#hint").textContent = "";
+      return;
+    }
+    $("#hint").textContent = "點一下欄位選它,之後 Ctrl+V 貼上的文字或截圖就會放進那一欄。拖曳行程可以換天;同一天依時間排序。";
+    const days = [UNSCHEDULED];
+    for (let d = t.startDate; d <= t.endDate; d++) days.push(d);
+    board.innerHTML = days.map((d) => columnHtml(t, d)).join("");
+  }
+
+  function columnHtml(t, day) {
+    const plans = t.plans.filter((p) => (p.date ?? null) === day).sort(sortPlans);
+    const key = day === UNSCHEDULED ? "u" : String(day);
+    const note = t.dayNotes[key] || "";
+    const head = day === UNSCHEDULED
+      ? `<span class="date">待排</span>`
+      : `<span class="day">Day ${day - t.startDate + 1}</span><span class="date">${shortDate(day)}</span>`;
+    return `<section class="col ${state.selectedDay === day ? "selected" : ""}" data-day="${key}">
+      <div class="col-head">${head}<span class="count">${plans.length} 項</span></div>
+      <div class="daynote ${note ? "" : "empty"}" data-note="${key}">${note ? `<span class="label">${day === UNSCHEDULED ? "待排筆記" : "當日筆記"}</span>${linkify(note)}` : "＋ 寫筆記"}</div>
+      ${plans.map(cardHtml).join("")}
+      <div class="add"><textarea placeholder="＋ 新增行程(可貼上多行)" data-add="${key}"></textarea></div>
+    </section>`;
+  }
+
+  function cardHtml(p) {
+    const [color, icon] = look(p.category);
+    const tags = [];
+    if (p.reservation === "NEEDED") tags.push(`<span class="tag red">需訂位</span>`);
+    if (p.reservation === "BOOKED") tags.push(`<span class="tag green">已訂${p.reservationNote ? " " + esc(p.reservationNote.split("\n")[0]) : ""}</span>`);
+    if (p.photos.length) tags.push(`<span class="tag">圖 ${p.photos.length}</span>`);
+    if (p.note) tags.push(`<span class="tag">筆記</span>`);
+    if (p.status === "SKIPPED") tags.push(`<span class="tag">跳過</span>`);
+    return `<article class="card ${p.status === "DONE" ? "done" : ""}" draggable="true" data-plan="${p.uuid}">
+      <div class="cat" style="background:${color}22;color:${color}">${esc(icon)}</div>
+      <div class="body">
+        ${p.minuteOfDay != null ? `<div class="time">${fmtTime(p.minuteOfDay)}</div>` : ""}
+        <div class="title">${esc(p.title || "(未命名)")}</div>
+        ${tags.length ? `<div class="tags">${tags.join("")}</div>` : ""}
+      </div>
+    </article>`;
+  }
+
+  function renderTop(t) {
+    const sel = $("#trip-select");
+    sel.innerHTML = state.trips.length
+      ? state.trips.slice().sort((a, b) => a.startDate - b.startDate).map((x) => `<option value="${x.uuid}" ${x.uuid === state.current ? "selected" : ""}>${esc(x.name)} · ${shortDate(x.startDate)}–${shortDate(x.endDate)}</option>`).join("")
+      : `<option>還沒有旅程</option>`;
+    sel.disabled = !state.trips.length;
+    $("#btn-settings").disabled = !t;
+    $("#btn-export").disabled = !t;
+  }
+
+  // ───────────────────────── editor drawer ─────────────────────────
+  function openEditor(p) {
+    state.editing = p.uuid;
+    renderEditor();
+  }
+  function closeEditor() {
+    state.editing = null;
+    $("#drawer")?.remove();
+    render();
+  }
+  function editingPlan() { return trip()?.plans.find((p) => p.uuid === state.editing) || null; }
+
+  function renderEditor() {
+    const t = trip();
+    const p = editingPlan();
+    $("#drawer")?.remove();
+    if (!t || !p) return;
+    const days = [`<option value="u" ${p.date == null ? "selected" : ""}>待排</option>`];
+    for (let d = t.startDate; d <= t.endDate; d++) days.push(`<option value="${d}" ${p.date === d ? "selected" : ""}>Day ${d - t.startDate + 1} · ${shortDate(d)}</option>`);
+    const cats = [`<option value="">未分類</option>`, ...categoriesOf(t).map((c) => `<option ${c.name === p.category ? "selected" : ""}>${esc(c.name)}</option>`)];
+    const linkChips = (text) => linksIn(text).map((u) => `<a class="btn small" href="${u.startsWith("www.") ? "https://" + u : u}" target="_blank" rel="noopener">↗ 開啟 ${esc(u.replace(/^https?:\/\//, "").split("/")[0])}</a>`).join("");
+    const el = document.createElement("aside");
+    el.className = "drawer";
+    el.id = "drawer";
+    el.innerHTML = `
+      <header><b>行程</b>
+        <button class="icon-btn" id="ed-delete" title="刪除">🗑</button>
+        <button class="icon-btn" id="ed-close" title="關閉">✕</button>
+      </header>
+      <div class="scroll">
+        <div class="field"><label>名稱</label><textarea id="ed-title" rows="2">${esc(p.title)}</textarea></div>
+        <div class="row">
+          <div class="field"><label>分類</label><select id="ed-category">${cats.join("")}</select></div>
+          <div class="field"><label>哪一天</label><select id="ed-day">${days.join("")}</select></div>
+          <div class="field"><label>時間</label><input type="time" id="ed-time" value="${p.minuteOfDay != null ? fmtTime(p.minuteOfDay) : ""}"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>狀態</label><select id="ed-status">
+            <option value="TODO" ${p.status === "TODO" ? "selected" : ""}>未去</option>
+            <option value="DONE" ${p.status === "DONE" ? "selected" : ""}>已去</option>
+            <option value="SKIPPED" ${p.status === "SKIPPED" ? "selected" : ""}>跳過</option></select></div>
+          <div class="field"><label>訂位</label><select id="ed-reservation">
+            <option value="NONE" ${p.reservation === "NONE" ? "selected" : ""}>不用訂位</option>
+            <option value="NEEDED" ${p.reservation === "NEEDED" ? "selected" : ""}>需要訂位</option>
+            <option value="BOOKED" ${p.reservation === "BOOKED" ? "selected" : ""}>已訂好</option></select></div>
+        </div>
+        <div class="field" id="ed-res-wrap" ${p.reservation === "NONE" ? "hidden" : ""}><label>訂位資訊</label>
+          <textarea id="ed-res-note" rows="2" placeholder="例如:19:00 · 4 位 · 確認碼 AB123">${esc(p.reservationNote)}</textarea>
+          <div class="links">${linkChips(p.reservationNote)}</div></div>
+        <div class="field"><label>地點</label><input id="ed-location" value="${esc(p.location)}" placeholder="地址或 Google 地圖連結">
+          <div class="links">${linkChips(p.location)}${p.location || p.title ? `<a class="btn small" target="_blank" rel="noopener" href="${p.location.startsWith("http") ? esc(p.location) : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(p.location || p.title)}">🗺 在地圖看</a>` : ""}</div></div>
+        <div class="field"><label>筆記</label><textarea id="ed-note" rows="4" placeholder="必點菜色、營業時間、注意事項…">${esc(p.note)}</textarea>
+          <div class="links">${linkChips(p.note)}</div></div>
+        <div class="field"><label>截圖/圖片(也可以直接 Ctrl+V 貼上或拖進來)</label>
+          <div class="pics">
+            ${p.photos.map((ph) => `<div class="pic" data-pic="${ph.id}"><img src="${picUrl(ph)}" alt=""><button data-remove-pic="${ph.id}" title="移除">✕</button></div>`).join("")}
+            <label class="pic add">＋ 加圖片<input type="file" id="ed-pics" accept="image/*" multiple hidden></label>
+          </div></div>
+      </div>`;
+    document.body.append(el);
+    const bind = (id, ev, fn) => $(id, el).addEventListener(ev, fn);
+    const changed = (rerender = false) => { save(); render(); if (rerender) renderEditor(); };
+    bind("#ed-close", "click", closeEditor);
+    bind("#ed-delete", "click", () => { if (confirm(`刪除「${p.title || "未命名"}」?`)) { deletePlan(p); closeEditor(); } });
+    bind("#ed-title", "input", (e) => { p.title = e.target.value; changed(); });
+    bind("#ed-category", "change", (e) => { p.category = e.target.value || null; changed(); });
+    bind("#ed-day", "change", (e) => { p.date = e.target.value === "u" ? null : +e.target.value; changed(); });
+    bind("#ed-time", "change", (e) => { p.minuteOfDay = parseTime(e.target.value); changed(); });
+    bind("#ed-status", "change", (e) => { p.status = e.target.value; changed(); });
+    bind("#ed-reservation", "change", (e) => { p.reservation = e.target.value; changed(true); });
+    bind("#ed-res-note", "change", (e) => { p.reservationNote = e.target.value; changed(true); });
+    bind("#ed-location", "change", (e) => { p.location = e.target.value.trim(); changed(true); });
+    bind("#ed-note", "change", (e) => { p.note = e.target.value; changed(true); });
+    bind("#ed-pics", "change", async (e) => { await attachPictures(p, [...e.target.files]); });
+    el.addEventListener("click", (e) => {
+      const rm = e.target.closest("[data-remove-pic]");
+      if (rm) { p.photos = p.photos.filter((x) => x.id !== rm.dataset.removePic); changed(true); return; }
+      const pic = e.target.closest("[data-pic]");
+      if (pic) showLightbox(picUrl(p.photos.find((x) => x.id === pic.dataset.pic)));
+    });
+    el.addEventListener("dragover", (e) => e.preventDefault());
+    el.addEventListener("drop", async (e) => {
+      const files = [...(e.dataTransfer?.files || [])].filter((f) => f.type.startsWith("image/"));
+      if (!files.length) return;
+      e.preventDefault();
+      e.stopPropagation();
+      await attachPictures(p, files);
+    });
+  }
+
+  async function attachPictures(p, files) {
+    for (const f of files.filter((f) => f.type.startsWith("image/"))) {
+      if (p.photos.length >= 9) { toast("一個行程最多 9 張圖片"); break; }
+      p.photos.push(await toPicture(f));
+    }
+    save();
+    render();
+    if (state.editing === p.uuid) renderEditor();
+  }
+
+  function showLightbox(src) {
+    const el = document.createElement("div");
+    el.className = "lightbox";
+    el.innerHTML = `<img src="${src}" alt="">`;
+    el.addEventListener("click", () => el.remove());
+    document.body.append(el);
+  }
+
+  // ───────────────────────── dialogs ─────────────────────────
+  function dialog(html, onMount) {
+    const back = document.createElement("div");
+    back.className = "backdrop";
+    back.innerHTML = `<div class="dialog">${html}</div>`;
+    const close = () => back.remove();
+    back.addEventListener("click", (e) => { if (e.target === back) close(); });
+    document.body.append(back);
+    onMount?.(back, close);
+    return close;
+  }
+
+  function tripDialog(existing) {
+    const today = Math.floor(Date.now() / 864e5);
+    const t = existing || { name: "", startDate: today + 14, endDate: today + 18 };
+    dialog(`<h2>${existing ? "旅程設定" : "新增旅程"}</h2>
+      <div class="field"><label>旅程名稱</label><input id="tr-name" value="${esc(t.name)}" placeholder="例如:首爾賞楓"></div>
+      <div class="row"><div class="field"><label>出發</label><input type="date" id="tr-start" value="${isoOf(t.startDate)}"></div>
+      <div class="field"><label>回程</label><input type="date" id="tr-end" value="${isoOf(t.endDate)}"></div></div>
+      ${existing ? `<p>改日期不會刪除行程;排在新日期範圍外的行程,會先放在原本的日期(手機上顯示在「旅程日期以外」)。</p>` : ""}
+      <div class="actions">${existing ? `<button class="btn danger" id="tr-delete">刪除這趟(只刪電腦上的)</button><span class="spacer"></span>` : ""}
+        <button class="btn" id="tr-cancel">取消</button><button class="btn primary" id="tr-ok">${existing ? "儲存" : "建立"}</button></div>`,
+    (root, close) => {
+      $("#tr-name", root).focus();
+      $("#tr-cancel", root).onclick = close;
+      $("#tr-ok", root).onclick = () => {
+        const name = $("#tr-name", root).value.trim();
+        const start = toEpochDay($("#tr-start", root).value);
+        const end = toEpochDay($("#tr-end", root).value);
+        if (!name) return toast("請輸入旅程名稱");
+        if (end < start) return toast("回程不能早於出發");
+        if (existing) Object.assign(existing, { name, startDate: start, endDate: end });
+        else {
+          const nt = { uuid: uuid(), name, startDate: start, endDate: end, navApp: null, plans: [], dayNotes: {}, deleted: [], categories: [], updatedAt: Date.now() };
+          state.trips.push(nt);
+          state.current = nt.uuid;
+          localStorage.setItem("current", nt.uuid);
+        }
+        save(existing || trip());
+        close();
+        render();
+      };
+      const del = $("#tr-delete", root);
+      if (del) del.onclick = async () => {
+        if (!confirm(`從這台電腦刪除「${existing.name}」?手機上的不受影響。`)) return;
+        state.trips = state.trips.filter((x) => x !== existing);
+        await idb("readwrite", (s) => s.delete(existing.uuid));
+        state.current = state.trips[0]?.uuid || null;
+        close();
+        render();
+      };
+    });
+  }
+
+  /** Preview of pasted text split into plan items, as on the phone. */
+  function splitDialog(text, day) {
+    const items = PlanParser.splitNote(text);
+    if (!items.length) return;
+    if (items.length === 1) return addPlans(items, day);
+    const t = trip();
+    const cats = categoriesOf(t);
+    const dayOptions = [`<option value="u">待排</option>`];
+    for (let d = t.startDate; d <= t.endDate; d++) dayOptions.push(`<option value="${d}" ${d === day ? "selected" : ""}>Day ${d - t.startDate + 1} · ${shortDate(d)}</option>`);
+    dialog(`<h2>拆成 <span id="sp-count">${items.length}</span> 個行程</h2>
+      <p>每一行一個行程。不是地點的行取消勾選;名稱、時間、分類都可以改。</p>
+      <div class="field"><label>放在</label><select id="sp-day">${dayOptions.join("")}</select></div>
+      <div id="sp-rows">${items.map((it, i) => `<div class="split-row">
+        <input type="checkbox" data-i="${i}" checked>
+        <input type="text" data-title="${i}" value="${esc(it.title)}">
+        <input type="time" data-time="${i}" value="${it.minuteOfDay != null ? fmtTime(it.minuteOfDay) : ""}">
+        <select data-cat="${i}"><option value="">未分類</option>${cats.map((c) => `<option ${c.name === it.category ? "selected" : ""}>${esc(c.name)}</option>`).join("")}</select>
+      </div>`).join("")}</div>
+      <label style="display:block;margin-top:.7rem"><input type="checkbox" id="sp-keep"> 另外把整段原文存成這一天的筆記</label>
+      <div class="actions"><button class="btn" id="sp-cancel">取消</button><button class="btn primary" id="sp-ok">建立</button></div>`,
+    (root, close) => {
+      if (day === UNSCHEDULED) $("#sp-day", root).value = "u";
+      const count = () => { $("#sp-count", root).textContent = root.querySelectorAll("[data-i]:checked").length; };
+      root.addEventListener("change", count);
+      $("#sp-cancel", root).onclick = close;
+      $("#sp-ok", root).onclick = () => {
+        const target = $("#sp-day", root).value === "u" ? UNSCHEDULED : +$("#sp-day", root).value;
+        const chosen = items.map((it, i) => ({
+          on: $(`[data-i="${i}"]`, root).checked,
+          title: $(`[data-title="${i}"]`, root).value.trim(),
+          minuteOfDay: parseTime($(`[data-time="${i}"]`, root).value),
+          category: $(`[data-cat="${i}"]`, root).value || null,
+          location: it.location,
+        })).filter((x) => x.on && x.title).map(({ on, ...rest }) => rest);
+        if ($("#sp-keep", root).checked) {
+          const key = target === UNSCHEDULED ? "u" : String(target);
+          trip().dayNotes[key] = [trip().dayNotes[key], text.trim()].filter(Boolean).join("\n\n");
+        }
+        close();
+        addPlans(chosen, target);
+        toast(`已建立 ${chosen.length} 個行程`);
+      };
+    });
+  }
+
+  // ───────────────────────── files: phone ↔ computer ─────────────────────────
+  const pad = (n) => String(n).padStart(2, "0");
+  function download(blob, name) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.append(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  /** The trip as a "plans" file the phone merges into the same trip. */
+  async function exportTrip() {
+    const t = trip();
+    if (!t) return;
+    const files = [];
+    const plans = [];
+    for (const p of t.plans) {
+      const photos = [];
+      for (const ph of p.photos) {
+        const name = `files/plans/${files.length}-${ph.id}.jpg`;
+        files.push({ name, data: new Uint8Array(await ph.blob.arrayBuffer()) });
+        photos.push({ file: name, width: ph.width, height: ph.height });
+      }
+      plans.push({
+        uuid: p.uuid, title: p.title.trim() || "未命名", category: p.category, date: p.date, minuteOfDay: p.minuteOfDay,
+        status: p.status, reservation: p.reservation, reservationNote: p.reservationNote.trim(), location: p.location.trim(),
+        note: p.note.trim(), createdAt: p.createdAt, photos,
+      });
+    }
+    const dayNotes = Object.entries(t.dayNotes).map(([k, text]) => ({ day: k === "u" ? -9223372036854775808 : +k, text: text || "" }));
+    const data = {
+      trip: { uuid: t.uuid, name: t.name, startDate: t.startDate, endDate: t.endDate, navApp: t.navApp || null },
+      categories: categoriesOf(t).map((c, i) => ({ name: c.name, sortOrder: i, icon: c.icon || "", color: c.color ?? -1 })),
+      plans, deleted: t.deleted, dayNotes,
+    };
+    const manifest = {
+      format: FORMAT, version: 1, kind: "plans", exportedAt: Date.now(), appVersion: "desktop-" + APP_VERSION, photoCount: files.length,
+      trips: [{ uuid: t.uuid, name: t.name, startDate: t.startDate, endDate: t.endDate, expenseCount: 0, totalHome: 0 }],
+    };
+    // The 待排 day key needs exact 64-bit Long.MIN_VALUE, which JSON numbers in JS cannot hold: write it as text.
+    const json = JSON.stringify(data).replace(/-9223372036854776000/g, "-9223372036854775808");
+    const blob = Zip.write([{ name: "manifest.json", data: JSON.stringify(manifest, null, 1) }, { name: "data.json", data: json }, ...files]);
+    const d = new Date();
+    download(blob, `卡溜趴行程-${t.name.replace(/[\\/:*?"<>|\s]+/g, "_").slice(0, 40)}-${d.getMonth() + 1}${pad(d.getDate())}.zip`);
+    dialog(`<h2>已存成檔案</h2>
+      <p>接下來:</p>
+      <ol><li>打開 <b>LINE 電腦版</b>,把剛下載的檔案傳給自己(或傳到 Keep)。</li>
+      <li>在手機的 LINE 點這個檔案 →「用其他應用程式開啟」→ 選<b>卡溜趴</b>。</li>
+      <li>確認後按「<b>併入</b>」。同一個行程會更新,不會重複;帳目不受影響。</li></ol>
+      <div class="actions"><button class="btn primary" id="ok">知道了</button></div>`, (root, close) => { $("#ok", root).onclick = close; });
+  }
+
+  /** A phone trip (share or backup JSON) as a desktop trip. */
+  function fromPhoneTrip(t, categories, files) {
+    const plans = (t.plans || []).filter((p) => !p.pending).map((p) => newPlan({
+      uuid: p.uuid || uuid(), title: p.title, category: p.category ?? null, date: p.date ?? null, minuteOfDay: p.minuteOfDay ?? null,
+      status: p.status || "TODO", reservation: p.reservation || "NONE", reservationNote: p.reservationNote || "", location: p.location || "",
+      note: p.note || "", createdAt: p.createdAt || Date.now(),
+      photos: (p.photos || []).filter((ph) => files.has(ph.file)).map((ph) => ({ id: uuid(), blob: new Blob([files.get(ph.file)], { type: "image/jpeg" }), width: ph.width, height: ph.height })),
+    }));
+    const dayNotes = {};
+    for (const n of t.dayNotes || []) if (n.text) dayNotes[n.day < -1e15 ? "u" : String(n.day)] = n.text;
+    return {
+      uuid: t.uuid, name: t.name, startDate: t.startDate, endDate: t.endDate, navApp: t.navApp || null,
+      plans, dayNotes, deleted: [], categories: (categories || []).map((c) => ({ name: c.name, icon: c.icon, color: c.color })), updatedAt: Date.now(),
+    };
+  }
+
+  async function openFile(file) {
+    let files;
+    try { files = await Zip.read(await file.arrayBuffer()); } catch { return toast("這不是卡溜趴的檔案"); }
+    let manifest, data;
+    try {
+      manifest = JSON.parse(Zip.text(files.get("manifest.json")));
+      data = JSON.parse(Zip.text(files.get("data.json")).replace(/(":\s*)(-9223372036854775808)/g, '$1"$2"'));
+    } catch { return toast("這不是卡溜趴的檔案"); }
+    if (manifest.format !== FORMAT) return toast("這不是卡溜趴的檔案");
+    const fixDay = (n) => (typeof n === "string" ? -9223372036854775808 : n);
+    let incoming;
+    if (manifest.kind === "plans") {
+      incoming = [fromPhoneTrip({ ...data.trip, plans: data.plans, dayNotes: (data.dayNotes || []).map((n) => ({ ...n, day: fixDay(n.day) })) }, data.categories, files)];
+    } else if (manifest.kind === "trip" || manifest.kind === "backup") {
+      incoming = data.trips.map((t) => fromPhoneTrip({ ...t, dayNotes: (t.dayNotes || []).map((n) => ({ ...n, day: fixDay(n.day) })) }, data.categories, files));
+    } else {
+      return toast("這是同伴的補充檔,要在手機上由記帳人打開");
+    }
+    const replacing = incoming.filter((t) => state.trips.some((x) => x.uuid === t.uuid));
+    dialog(`<h2>打開手機檔案</h2>
+      <p>${incoming.map((t) => `「${esc(t.name)}」${t.plans.length} 個行程`).join("、")}</p>
+      ${replacing.length ? `<p><b>電腦上已經有${replacing.map((t) => `「${esc(t.name)}」`).join("")}</b>,會換成這個檔案的內容(電腦上還沒傳到手機的修改會不見)。</p>` : ""}
+      <div class="actions"><button class="btn" id="no">取消</button><button class="btn primary" id="yes">${replacing.length ? "取代" : "打開"}</button></div>`,
+    (root, close) => {
+      $("#no", root).onclick = close;
+      $("#yes", root).onclick = async () => {
+        for (const t of incoming) {
+          state.trips = state.trips.filter((x) => x.uuid !== t.uuid).concat(t);
+          await idb("readwrite", (s) => s.put(t));
+        }
+        state.current = incoming[0].uuid;
+        localStorage.setItem("current", state.current);
+        close();
+        render();
+        toast("已打開");
+      };
+    });
+  }
+
+  // ───────────────────────── events ─────────────────────────
+  const dayOf = (key) => (key === "u" ? UNSCHEDULED : +key);
+
+  document.addEventListener("click", (e) => {
+    const card = e.target.closest("[data-plan]");
+    if (card && !e.target.closest("a")) { openEditor(trip().plans.find((p) => p.uuid === card.dataset.plan)); return; }
+    const note = e.target.closest("[data-note]");
+    if (note && !e.target.closest("a") && !note.querySelector("textarea")) {
+      const key = note.dataset.note;
+      note.className = "daynote";
+      note.innerHTML = `<span class="label">${key === "u" ? "待排筆記" : "當日筆記"}</span><textarea>${esc(trip().dayNotes[key] || "")}</textarea>`;
+      const ta = note.querySelector("textarea");
+      ta.focus();
+      ta.addEventListener("blur", () => {
+        const text = ta.value.trim();
+        if (text) trip().dayNotes[key] = text;
+        else trip().dayNotes[key] = ""; // sent as "" so the phone clears it too
+        save();
+        render();
+      });
+      return;
+    }
+    const col = e.target.closest(".col");
+    if (col) {
+      state.selectedDay = dayOf(col.dataset.day);
+      document.querySelectorAll(".col").forEach((c) => c.classList.toggle("selected", c === col));
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    const ta = e.target.closest?.("[data-add]");
+    if (ta && e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const text = ta.value.trim();
+      if (!text) return;
+      ta.value = "";
+      const day = dayOf(ta.dataset.add);
+      if (text.includes("\n")) splitDialog(text, day);
+      else {
+        const [it] = PlanParser.splitNote(text);
+        addPlans([it || { title: text }], day);
+      }
+    }
+    if (e.key === "Escape") { if ($(".lightbox")) $(".lightbox").remove(); else if ($(".backdrop")) $(".backdrop").remove(); else if (state.editing) closeEditor(); }
+  });
+
+  document.addEventListener("paste", async (e) => {
+    const t = trip();
+    if (!t) return;
+    const images = [...(e.clipboardData?.files || [])].filter((f) => f.type.startsWith("image/"));
+    const field = e.target.closest?.("input, textarea");
+    if (images.length) {
+      e.preventDefault();
+      const editing = editingPlan();
+      if (editing) return attachPictures(editing, images);
+      const p = newPlan({ title: "截圖", date: state.selectedDay, createdAt: Date.now() });
+      t.plans.push(p);
+      await attachPictures(p, images);
+      openEditor(p);
+      return;
+    }
+    const text = e.clipboardData?.getData("text/plain") || "";
+    const addBox = e.target.closest?.("[data-add]");
+    if (addBox && text.includes("\n")) { e.preventDefault(); splitDialog(text, dayOf(addBox.dataset.add)); return; }
+    if (field) return; // ordinary typing into a field
+    if (!text.trim()) return;
+    e.preventDefault();
+    if (text.includes("\n") && !/^https?:\/\//.test(text.trim())) splitDialog(text, state.selectedDay);
+    else addPlans([PlanParser.parseShare(text)], state.selectedDay);
+  });
+
+  // Drag: cards between days; links, text, pictures and 卡溜趴 files from outside.
+  document.addEventListener("dragstart", (e) => {
+    const card = e.target.closest?.("[data-plan]");
+    if (!card) return;
+    state.dragging = card.dataset.plan;
+    e.dataTransfer.setData("text/x-kalupa-plan", card.dataset.plan);
+    e.dataTransfer.effectAllowed = "move";
+    card.classList.add("dragging");
+  });
+  document.addEventListener("dragend", () => { state.dragging = null; document.querySelectorAll(".dragging,.over").forEach((x) => x.classList.remove("dragging", "over")); $("#drop-cover")?.remove(); });
+  document.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    const col = e.target.closest?.(".col");
+    document.querySelectorAll(".col.over").forEach((c) => { if (c !== col) c.classList.remove("over"); });
+    if (col) col.classList.add("over");
+    const isFile = [...(e.dataTransfer?.items || [])].some((i) => i.kind === "file");
+    if (isFile && !col && !$("#drawer") && !$("#drop-cover")) {
+      const cover = document.createElement("div");
+      cover.id = "drop-cover";
+      cover.className = "drop-cover";
+      cover.textContent = "放開來打開卡溜趴檔案";
+      document.body.append(cover);
+    }
+  });
+  document.addEventListener("dragleave", (e) => { if (!e.relatedTarget) $("#drop-cover")?.remove(); });
+  document.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    $("#drop-cover")?.remove();
+    document.querySelectorAll(".col.over").forEach((c) => c.classList.remove("over"));
+    const t = trip();
+    const files = [...(e.dataTransfer?.files || [])];
+    const zip = files.find((f) => /\.zip$/i.test(f.name) || f.type.includes("zip"));
+    if (zip) return openFile(zip);
+    if (!t) return;
+    const col = e.target.closest?.(".col");
+    const card = e.target.closest?.("[data-plan]");
+    const planId = e.dataTransfer.getData("text/x-kalupa-plan");
+    if (planId) {
+      if (!col) return;
+      const p = t.plans.find((x) => x.uuid === planId);
+      p.date = dayOf(col.dataset.day);
+      save();
+      render();
+      return;
+    }
+    const images = files.filter((f) => f.type.startsWith("image/"));
+    if (images.length) {
+      if (card) return attachPictures(t.plans.find((x) => x.uuid === card.dataset.plan), images);
+      if (!col) return;
+      const p = newPlan({ title: "截圖", date: dayOf(col.dataset.day), createdAt: Date.now() });
+      t.plans.push(p);
+      await attachPictures(p, images);
+      openEditor(p);
+      return;
+    }
+    if (!col) return;
+    const day = dayOf(col.dataset.day);
+    const uri = e.dataTransfer.getData("text/uri-list").split("\n").find((l) => l && !l.startsWith("#"));
+    const text = e.dataTransfer.getData("text/plain") || uri || "";
+    if (!text.trim()) return;
+    if (text.includes("\n") && !/^https?:\/\/\S+$/.test(text.trim())) splitDialog(text, day);
+    else addPlans([PlanParser.parseShare(text)], day);
+  });
+
+  // ── top bar ──
+  $("#trip-select").addEventListener("change", (e) => { state.current = e.target.value; localStorage.setItem("current", state.current); closeEditor(); });
+  $("#btn-new").addEventListener("click", () => tripDialog(null));
+  $("#btn-settings").addEventListener("click", () => tripDialog(trip()));
+  $("#btn-export").addEventListener("click", exportTrip);
+  $("#file-input").addEventListener("change", (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) openFile(f); });
+  const setFont = (px) => { document.documentElement.style.setProperty("--fs", px + "px"); localStorage.setItem("fs", px); };
+  $("#btn-smaller").addEventListener("click", () => setFont(Math.max(13, (+localStorage.getItem("fs") || 17) - 1)));
+  $("#btn-bigger").addEventListener("click", () => setFont(Math.min(26, (+localStorage.getItem("fs") || 17) + 1)));
+
+  // ── start ──
+  (async () => {
+    if (localStorage.getItem("fs")) setFont(+localStorage.getItem("fs"));
+    db = await openDb();
+    state.trips = (await idb("readonly", (s) => s.getAll())) || [];
+    state.current = state.trips.find((t) => t.uuid === localStorage.getItem("current"))?.uuid || state.trips[0]?.uuid || null;
+    render();
+    window.__ready = true;
+  })();
+})();
+</script>
+</body>
+</html>

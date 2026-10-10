@@ -409,6 +409,7 @@ private fun PlanRowItem(p: PlanRow, trip: Trip, showDate: Boolean, withActions: 
                 if (p.pending) add("我的補充" to ledger.warning)
                 p.addedBy?.let { add("$it 補充" to ledger.warning) }
                 if (p.spent > 0) add("已花 ${fmtMoney(p.spent)}" to MaterialTheme.colorScheme.primary)
+                if (p.photoCount > 0) add("圖 ${p.photoCount}" to MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (tags.isNotEmpty()) {
                 Row(Modifier.padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -464,10 +465,16 @@ data class PlanActions(
     val back: () -> Unit = {},
     val record: () -> Unit = {},
     val openMap: (PlanItem) -> Unit = {},
+    val addPictures: () -> Unit = {},
+    val removePicture: (Int) -> Unit = {},
 )
 
 @Composable
-fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isNew: Boolean, actions: PlanActions) {
+fun PlanEditScreen(
+    item: PlanItem?, trip: Trip?, categories: List<Category>, isNew: Boolean, actions: PlanActions,
+    pictures: List<PlanPicture> = emptyList(),
+    addingPictures: Boolean = false,
+) {
     var pickTime by remember { mutableStateOf(false) }
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -527,6 +534,8 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                 LinkAwareInput(p.note, { v -> actions.edit { it.copy(note = v) } }, "必點菜色、營業時間、注意事項…", singleLine = false, minLines = 2)
             }
             LinkButtons(p.note)
+
+            PictureStrip(pictures.map { it.path }, onRemove = actions.removePicture, onAdd = actions.addPictures.takeIf { pictures.size < MAX_PLAN_PICTURES }, busy = addingPictures)
 
 
         }
@@ -737,6 +746,50 @@ fun DayNoteDialog(title: String, initial: String, onDismiss: () -> Unit, onSave:
         confirmButton = { TextButton({ onSave(text) }) { Text("儲存") } },
         dismissButton = { TextButton(onDismiss) { Text("取消") } },
     )
+}
+
+/**
+ * Pictures on a plan item (menu, opening hours, a route screenshot): thumbnails in a row, with an add tile in
+ * the editor ([onAdd]) and a remove badge ([onRemove]); [onOpen] views one full screen.
+ */
+@Composable
+fun PictureStrip(
+    paths: List<String>,
+    onRemove: ((Int) -> Unit)? = null,
+    onAdd: (() -> Unit)? = null,
+    onOpen: (Int) -> Unit = {},
+    busy: Boolean = false,
+) {
+    if (paths.isEmpty() && onAdd == null) return
+    val cs = MaterialTheme.colorScheme
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(paths.size) { i ->
+            Box(Modifier.size(88.dp).clip(RoundedCornerShape(12.dp)).background(cs.surfaceVariant).clickable { onOpen(i) }) {
+                val img by rememberLocalImage(paths[i], targetPx = 300)
+                img?.let { androidx.compose.foundation.Image(it, null, Modifier.matchParentSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
+                if (onRemove != null) {
+                    Box(
+                        Modifier.align(Alignment.TopEnd).padding(4.dp).size(26.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.55f))
+                            .clickable { onRemove(i) },
+                        contentAlignment = Alignment.Center,
+                    ) { Icon(Icons.Rounded.Close, "移除圖片", Modifier.size(16.dp), tint = Color.White) }
+                }
+            }
+        }
+        if (onAdd != null) {
+            item {
+                Column(
+                    Modifier.size(88.dp).clip(RoundedCornerShape(12.dp)).border(1.dp, ledger.hairline, RoundedCornerShape(12.dp))
+                        .clickable(enabled = !busy, onClick = onAdd),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                ) {
+                    if (busy) CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.Rounded.AddPhotoAlternate, null, tint = cs.primary)
+                    Text("截圖/圖片", style = MaterialTheme.typography.labelMedium, color = cs.primary, maxLines = 1, softWrap = false)
+                }
+            }
+        }
+    }
 }
 
 /** Large single-line title input used at the top of editors. */

@@ -5,6 +5,9 @@
 ```
 ./gradlew :app:testDebugUnitTest          # 全部測試
 ./gradlew :app:recordPaparazziDebug       # 重新產生畫面截圖(app/src/test/snapshots/images)
+node desktop/build.mjs                    # 產生桌面網頁 desktop/dist/卡溜趴行程桌.html
+node --test desktop/test/parser.test.mjs  # 桌面拆分規則
+PLAYWRIGHT_DIR=/opt/node-tools/node_modules node desktop/test/e2e.mjs   # 桌面實際操作(需先跑一次 DesktopExchangeTest)
 ```
 
 | 測試 | 內容 |
@@ -18,6 +21,9 @@
 | `ui/LinkTapTest` | 在編輯與明細畫面實際點擊網址、電話:確認開啟網頁/撥號,點其他文字進入編輯 |
 | `ui/KeypadResizeTest` | 拖曳計算機上方橫槓:按鍵變大/變小、有上下限、記住高度 |
 | `ui/MapLauncherTest` | 導航:Google 路線/Naver/Kakao 用名稱搜尋/每次詢問,以及沒安裝時的備案 |
+| `backup/DesktopExchangeTest` | 手機檔給桌面(產生 e2e 用的檔案)、桌面行程檔併入手機(更新/新增/刪除/當日筆記/截圖,帳目不動)、新建旅程、別人的旅程拒絕、真的由桌面網頁寫出的檔案能併入 |
+| `logic/ParserParityTest` + `desktop/test/parser.test.mjs` | 手機與桌面跑同一份 `desktop/test/parser-cases.json`,拆分與分類結果一致 |
+| `desktop/test/e2e.mjs` | 用 Chromium 實際操作桌面網頁:建旅程、輸入、貼上多行、拖曳換天、截圖、當日筆記、重新整理後資料還在、傳到手機的檔案內容;再打開手機檔案修改後傳回(產生 `roundtrip.zip`) |
 | `logic/LinksTest` | 網址與電話偵測(不把日期、金額當電話) |
 | `ui/PasteDialogTest` | 貼上多筆對話框 |
 | `logic/*Test`、`ui/LogicTest` | 收據解析、貼上/地圖分享解析、計算機、換算 |

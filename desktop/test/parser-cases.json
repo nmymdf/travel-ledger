@@ -1,0 +1,186 @@
+[
+ {
+  "fn": "splitNote",
+  "input": "第三天\n09:00 景福宮 韓服體驗\n中午 土俗村蔘雞湯\nhttps://maps.app.goo.gl/abc\n下午3點半 北村韓屋村 → 仁寺洞 → Olive Young 明洞店\n晚上 明洞夜市\n回飯店休息\n記得帶護照",
+  "expect": [
+   {
+    "title": "景福宮 韓服體驗",
+    "category": "景點",
+    "minuteOfDay": 540,
+    "location": ""
+   },
+   {
+    "title": "土俗村蔘雞湯",
+    "category": "吃",
+    "minuteOfDay": 720,
+    "location": "https://maps.app.goo.gl/abc"
+   },
+   {
+    "title": "北村韓屋村",
+    "category": "景點",
+    "minuteOfDay": 930,
+    "location": ""
+   },
+   {
+    "title": "仁寺洞",
+    "category": "景點",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "Olive Young 明洞店",
+    "category": "購物",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "明洞夜市",
+    "category": "景點",
+    "minuteOfDay": 1080,
+    "location": ""
+   },
+   {
+    "title": "回飯店休息",
+    "category": "住宿",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "記得帶護照",
+    "category": null,
+    "minuteOfDay": null,
+    "location": ""
+   }
+  ]
+ },
+ {
+  "fn": "splitNote",
+  "input": "11:40～【交通】:搭乘 01A 循環公車下山直達「南大門市場」站(約 20 分鐘)。\n12:10 南大門市場 逛街\n[吃] 明洞餃子\n住宿:樂天飯店\n🛍 樂天免稅店\n步行前往 景福宮",
+  "expect": [
+   {
+    "title": "搭乘 01A 循環公車下山直達「南大門市場」站(約 20 分鐘)",
+    "category": "交通",
+    "minuteOfDay": 700,
+    "location": ""
+   },
+   {
+    "title": "南大門市場 逛街",
+    "category": "購物",
+    "minuteOfDay": 730,
+    "location": ""
+   },
+   {
+    "title": "明洞餃子",
+    "category": "吃",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "樂天飯店",
+    "category": "住宿",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "🛍 樂天免稅店",
+    "category": "購物",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "步行前往 景福宮",
+    "category": "交通",
+    "minuteOfDay": null,
+    "location": ""
+   }
+  ]
+ },
+ {
+  "fn": "splitNote",
+  "input": "1. 一蘭拉麵 本店\n- 淺草寺\n• 新宿王子飯店\n晴空塔 https://maps.app.goo.gl/x",
+  "expect": [
+   {
+    "title": "一蘭拉麵 本店",
+    "category": "吃",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "淺草寺",
+    "category": "景點",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "新宿王子飯店",
+    "category": "住宿",
+    "minuteOfDay": null,
+    "location": ""
+   },
+   {
+    "title": "晴空塔",
+    "category": "景點",
+    "minuteOfDay": null,
+    "location": "https://maps.app.goo.gl/x"
+   }
+  ]
+ },
+ {
+  "fn": "findTime",
+  "input": "19:00 烤肉",
+  "expect": 1140
+ },
+ {
+  "fn": "findTime",
+  "input": "下午3點 咖啡",
+  "expect": 900
+ },
+ {
+  "fn": "findTime",
+  "input": "10點15分 集合",
+  "expect": 615
+ },
+ {
+  "fn": "findTime",
+  "input": "飯店早餐",
+  "expect": 480
+ },
+ {
+  "fn": "findTime",
+  "input": "景福宮",
+  "expect": null
+ },
+ {
+  "fn": "guessCategory",
+  "input": "搭 KTX 去釜山",
+  "expect": "交通"
+ },
+ {
+  "fn": "guessCategory",
+  "input": "錦市場",
+  "expect": "購物"
+ },
+ {
+  "fn": "guessCategory",
+  "input": "Onion 安國店",
+  "expect": null
+ },
+ {
+  "fn": "parseShare",
+  "input": "一蘭 新宿中央東口店\nhttps://maps.app.goo.gl/XyZ123",
+  "expect": {
+   "title": "一蘭 新宿中央東口店",
+   "location": "https://maps.app.goo.gl/XyZ123",
+   "category": null
+  }
+ },
+ {
+  "fn": "parseShare",
+  "input": "Ichiran Shinjuku, 3 Chome-34-11 Shinjuku, Tokyo 160-0022 https://maps.app.goo.gl/q",
+  "expect": {
+   "title": "Ichiran Shinjuku",
+   "location": "https://maps.app.goo.gl/q",
+   "category": null
+  }
+ }
+]

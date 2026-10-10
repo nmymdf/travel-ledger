@@ -203,3 +203,18 @@ data class DayNote(
 
 /** The 待排 list has no date; its note is stored under this day. */
 const val UNSCHEDULED_DAY = Long.MIN_VALUE
+
+/** A picture kept with a plan item: a screenshot of the menu, opening hours, a route… */
+@Entity(
+    tableName = "plan_photo",
+    foreignKeys = [ForeignKey(PlanItem::class, ["id"], ["planItemId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("planItemId")],
+)
+data class PlanPhoto(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val planItemId: Long,
+    val path: String,
+    val width: Int = 0,
+    val height: Int = 0,
+    val createdAt: Long = System.currentTimeMillis(),
+)

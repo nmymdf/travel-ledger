@@ -276,4 +276,14 @@ class ScreenSnapshots {
             )
         }
     }
+
+    @Test fun planEditPictures() = paparazzi.snapshot {
+        AppTheme(ThemeMode.LIGHT) {
+            PlanEditScreen(
+                PlanItem(2, 1, "廣藏市場 綠豆煎餅", cat("吃"), d(6, 12), 12 * 60, PlanStatus.TODO, Reservation.NONE, "", "", null, "必點綠豆煎餅、麻藥飯捲"),
+                trip, categories, false, PlanActions(),
+                pictures = listOf(PlanPicture(1, "/nope1.jpg"), PlanPicture(2, "/nope2.jpg")),
+            )
+        }
+    }
 }
