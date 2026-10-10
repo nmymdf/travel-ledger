@@ -510,7 +510,7 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
                 ) { i -> actions.edit { it.copy(reservation = res[i]) } }
             }
             if (p.reservation != Reservation.NONE) {
-                FieldBox("訂位資訊") { LinkAwareInput(p.reservationNote, { v -> actions.edit { it.copy(reservationNote = v) } }, "例如:19:00 · 4 位 · 確認碼 AB123", singleLine = false) }
+                FieldBox("訂位資訊") { LinkAwareInput(p.reservationNote, { v -> actions.edit { it.copy(reservationNote = v) } }, "例如:19:00 · 4 位 · 確認碼 AB123", singleLine = false, minLines = 2) }
                 LinkButtons(p.reservationNote)
             }
 
@@ -533,7 +533,7 @@ fun PlanEditScreen(item: PlanItem?, trip: Trip?, categories: List<Category>, isN
             }
 
             FieldBox("筆記") {
-                LinkAwareInput(p.note, { v -> actions.edit { it.copy(note = v) } }, "必點菜色、營業時間、注意事項…", singleLine = false, minHeight = 60.dp)
+                LinkAwareInput(p.note, { v -> actions.edit { it.copy(note = v) } }, "必點菜色、營業時間、注意事項…", singleLine = false, minLines = 3)
             }
             LinkButtons(p.note)
         }
@@ -749,6 +749,7 @@ fun DayNoteDialog(title: String, initial: String, onDismiss: () -> Unit, onSave:
 /** Large single-line title input used at the top of editors. */
 @Composable
 fun TitleField(value: String, placeholder: String, onChange: (String) -> Unit) {
+    // Plan names are often whole sentences ("搭乘 01A 循環公車到南大門市場站…"): show two lines at least, wrap, allow Enter.
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val cs = MaterialTheme.colorScheme
@@ -756,12 +757,12 @@ fun TitleField(value: String, placeholder: String, onChange: (String) -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(shape).background(cs.surfaceContainerLowest)
             .border(if (focused) 1.5.dp else 1.dp, if (focused) cs.primary else ledger.hairline, shape)
-            .padding(start = 14.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.Top,
     ) {
         val style = MaterialTheme.typography.titleMedium.copy(color = cs.onSurface)
         BasicTextField(
-            value, onChange, Modifier.weight(1f), singleLine = true, textStyle = style,
+            value, onChange, Modifier.weight(1f).padding(top = 8.dp, bottom = 8.dp), minLines = 2, maxLines = 6, textStyle = style,
             cursorBrush = SolidColor(cs.primary), interactionSource = interaction,
             decorationBox = { inner ->
                 if (value.isEmpty()) Text(placeholder, style = style.copy(fontWeight = FontWeight.Normal), color = ledger.textMuted)

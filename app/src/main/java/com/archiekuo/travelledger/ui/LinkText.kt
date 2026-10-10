@@ -108,6 +108,8 @@ fun LinkAwareInput(
     modifier: Modifier = Modifier,
     singleLine: Boolean = true,
     minHeight: Dp = 0.dp,
+    /** Lines kept visible while typing, so longer text has room. */
+    minLines: Int = 1,
 ) {
     val style = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface)
     var editing by remember { mutableStateOf(false) }
@@ -140,7 +142,7 @@ fun LinkAwareInput(
         modifier.fillMaxWidth().heightIn(min = minHeight).focusRequester(focus).onFocusChanged {
             if (it.isFocused) hadFocus = true else if (hadFocus) { hadFocus = false; editing = false }
         },
-        singleLine = singleLine, textStyle = style, cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        singleLine = singleLine, minLines = if (singleLine) 1 else minLines, textStyle = style, cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         decorationBox = { inner ->
             Box {
                 if (value.isEmpty()) Text(placeholder, style = style, color = ledger.textMuted)
