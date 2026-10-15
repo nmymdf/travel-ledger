@@ -1,5 +1,7 @@
 # 卡溜趴(travel-ledger)— 給 Claude 的專案說明
 
+**先讀 https://github.com/nmymdf/READFIRST(家族所有 App 共用的分工與規則)**,再讀這份。
+
 每次開工先讀這份。細節在 `docs/` 裡,這裡只講「誰做什麼、規則、去哪裡找」。
 
 ## 專案與分工
