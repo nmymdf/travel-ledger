@@ -14,6 +14,7 @@
 | 電腦行程桌(單一 HTML,只有行程) | 爸爸與他的 Claude | 本 repo `desktop/` |
 | iPhone / iPad(SwiftUI、GRDB、ZIPFoundation) | **Jay(兒子)**與他的 Claude | Jay 的 fork `jaykuo0619/travel-ledger` 的 `ios` 分支,`ios/` 資料夾 |
 
+- **iPhone 版:需要**(依 READFIRST 的規則,每次 Android 改版都要更新給 Jay 的交接文件)。
 - **Android 這邊的 Claude 不改 `ios/`**。iPhone 要跟著改的事,寫進 `docs/IOS_PORT.md`(規格)和 `docs/IOS_TODO.md`(待辦清單)並 push,Jay 有空時照著做。
 - **Jay 那邊的 Claude 不改 `app/`、`desktop/`、`compat/fixtures/`**。iPhone 匯出的相容檔放 `compat/from-ios/`。
 - **檔案格式(`docs/IOS_PORT.md` 第 4 節)三邊共用**。任何一邊要改格式、改 `compat/fixtures/`,先停下來問使用者,並通知另一邊;能不改就不改。
