@@ -42,6 +42,7 @@
 | `compat/README.md` | 三邊互傳的相容測試檔說明 |
 | `desktop/README.md` | 電腦行程桌的結構 |
 | `docs/manual/` | 使用說明書(HTML → PDF) |
+| `docs/打包APK指南.md` | 通用的 Android 打包步驟(簽章金鑰、環境、安裝),給使用者的其他 App 專案參考 |
 
 ## 常用指令(Android / 電腦行程桌)
 
