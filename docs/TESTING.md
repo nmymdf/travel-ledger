@@ -30,6 +30,7 @@ PLAYWRIGHT_DIR=/opt/node-tools/node_modules node desktop/test/e2e.mjs   # 桌面
 | `ui/LogicTest`(計算機) | 先乘除後加減、同級由左到右、四捨五入兩位、除以 0、運算符號替換、每個數字各自的小數點與位數限制、「=」收成數字、顯示格式;`LedgerFlowTest` 算式存成結果、≤ 0 不能存 |
 | `backup/SharingMixupsTest` | 電腦行程檔到同伴手機選「別人記帳」→ 唯讀副本 → 補充傳給記帳人;選自己 → 自己的旅程;記帳人收到自己旅程的檔 → 列出對方新增的項目並加入(原本內容不變、不重複);同伴再分享唯讀副本時沒有新項目 |
 | `ui/PlansImportDialogTest` | 電腦行程檔對話框:問誰記帳、選別人時名字必填、手機已有旅程時不問 |
+| `ui/KeyboardCoverTest` | 模擬鍵盤升起:記一筆的備註、編輯行程的筆記都在鍵盤上方(拿掉修正時會失敗) |
 | `ui/ImageSharpnessTest` | 同一張圖先以縮圖載入,再以全螢幕載入時拿到的是原尺寸(不是縮圖);長截圖以短邊決定縮小倍數 |
 | `logic/LinksTest` | 網址與電話偵測(不把日期、金額當電話) |
 | `ui/PasteDialogTest` | 貼上多筆對話框 |

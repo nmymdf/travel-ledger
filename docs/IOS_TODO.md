@@ -40,6 +40,7 @@ git merge upstream/claude/confident-volta-6rsegv
 | v0.10.5 | 新增/編輯行程**沒名稱按 ✓**:✓ 一律可按(看起來是灰的),按了不存,名稱欄紅框、紅字「請輸入名稱才能儲存」、聚焦並開鍵盤 | 11.H「編輯行程」 | `ui/PlanScreens.kt` `PlanEditScreen`、`AppFlowTest.addAPlanToUnscheduled` |
 | v0.10.6 | **電腦行程檔到了沒有這趟旅程的手機**:問「這趟旅程是誰記帳?」,選「別人記帳」+ 名字 → 唯讀副本 | 11.A「傳錯檔案的兩種補救」第 1 點 | `TripArchive.importPlans(organizer)`、`PlansImportDialog`、`PlansImportDialogTest` |
 | v0.10.6 | **記帳人收到自己旅程的 kind=trip 檔**:列出對方有、自己沒有的行程與支出讓記帳人勾選加入(不再只拒絕);沒有新項目時提示改用「傳給記帳人」 | 11.A「傳錯檔案的兩種補救」第 2 點 | `TripArchive.readNewItems`/`importNewItems`、`backup/SharingMixupsTest` |
+| v0.10.7 | **鍵盤不能擋住正在輸入的欄位**:記一筆的備註、編輯行程的筆記、編輯旅程下方的欄位(Android 曾經被擋住)。SwiftUI 通常會自動處理,請在真機上確認一次 | — | `ui/KeyboardCoverTest` |
 
 ## C. 只有 Android 或電腦行程桌、iPhone 不用做
 

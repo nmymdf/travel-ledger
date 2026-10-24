@@ -104,7 +104,8 @@ fun TripEditScreen(
         },
     ) { pad ->
         Column(
-            Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
+            // imePadding: keep the field being typed in (budget, rates near the bottom) above the keyboard.
+            Modifier.padding(pad).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Box(Modifier.fillMaxWidth().height(140.dp).clip(MaterialTheme.shapes.large).clickable(onClick = onPickCover)) {

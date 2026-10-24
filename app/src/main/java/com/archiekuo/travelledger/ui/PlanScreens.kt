@@ -501,7 +501,8 @@ fun PlanEditScreen(
         val p = item ?: return@Scaffold
         val t = trip ?: return@Scaffold
         Column(
-            Modifier.padding(pad).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
+            // imePadding: keep the field being typed in (筆記 is at the bottom) above the keyboard.
+            Modifier.padding(pad).imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             TitleField(p.title, "景點、餐廳或活動名稱", error = nameMissing && p.title.isBlank(), focusRequester = nameFocus) { v ->

@@ -101,7 +101,9 @@ fun ExpenseEditScreen(
             },
         ) { pad ->
             val s = state ?: return@Scaffold
-            Column(Modifier.padding(top = pad.calculateTopPadding()).fillMaxSize()) {
+            // imePadding: the window is edge-to-edge, so the keyboard covers the screen instead of shrinking it;
+            // keep the fields above it (the focused one scrolls into view, e.g. 備註 at the bottom).
+            Column(Modifier.padding(top = pad.calculateTopPadding()).fillMaxSize().imePadding()) {
                 Column(
                     Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
