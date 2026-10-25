@@ -244,11 +244,27 @@ class LedgerFlowTest {
         val r = rows(trip).single()
         assertEquals(17600.0, r.amount, 0.0)
         assertEquals(toHomeAmount(17600.0, 0.21), r.homeAmount, 0.0)
-        // Nothing to save when the sum comes to zero or less.
+        // A negative sum cannot be saved; nothing typed neither.
         val next = ExpenseEditViewModel(app, db, trip, null, false)
+        assertEquals(false, next.state!!.canSave)
         "50−100".forEach { next.key(it.toString()) }
         assertEquals(false, next.state!!.canSave)
         assertTrue(vm.state != null)
+    }
+
+    /** Something free still belongs on the list: 0 can be saved, and an expense can be changed to 0. */
+    @Test fun zeroCanBeSaved() {
+        val trip = createTrip()
+        record(trip, "免費接駁車", "0", "交通", "現金", d(6, 11))
+        assertEquals(0.0, rows(trip).single().homeAmount, 0.0)
+        val id = rows(trip).single().id
+        val vm = ExpenseEditViewModel(app, db, trip, id, false)
+        vm.key("C"); vm.key("0")
+        assertTrue(vm.state!!.canSave)
+        var saved = false
+        vm.save { saved = true }
+        assertTrue(saved)
+        assertEquals(0.0, rows(trip).single().amount, 0.0)
     }
 
     @Test fun removingAMemberClearsTheirPayments() {

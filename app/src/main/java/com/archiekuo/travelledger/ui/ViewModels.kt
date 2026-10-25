@@ -128,8 +128,11 @@ data class EditState(
     val note: String = "",
     val noteOpen: Boolean = false,
 ) {
-    /** The amount, worked out when the keypad holds a sum ("1200+350×2"); only a positive result can be saved. */
-    val amountValue: Double? get() = evaluate(amount)?.takeIf { it > 0 }
+    /**
+     * The amount, worked out when the keypad holds a sum ("1200+350×2"). Zero is allowed (something free that should
+     * still be on the list); nothing typed, or a negative result, cannot be saved.
+     */
+    val amountValue: Double? get() = evaluate(amount)?.takeIf { it >= 0 }
     val rateValue: Double? get() = rate.toDoubleOrNull()?.takeIf { it > 0 }
     val homeAmount: Double? get() = amountValue?.let { a -> rateValue?.let { toHomeAmount(a, it) } }
     val canSave: Boolean get() = homeAmount != null

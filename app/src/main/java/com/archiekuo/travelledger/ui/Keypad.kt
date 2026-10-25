@@ -176,7 +176,7 @@ fun KeypadPanel(
         if (onKeyHeight != null) {
             // Drag handle: pull up for bigger keys, push down for more room above.
             Box(
-                Modifier.fillMaxWidth().height(22.dp)
+                Modifier.fillMaxWidth().height(30.dp)
                     .draggable(
                         rememberDraggableState { px ->
                             val d = with(density) { px.toDp() }
@@ -187,7 +187,7 @@ fun KeypadPanel(
                     )
                     .semantics { contentDescription = "拖曳調整計算機高度" },
                 contentAlignment = Alignment.Center,
-            ) { Box(Modifier.size(width = 44.dp, height = 5.dp).clip(RoundedCornerShape(50)).background(cs.outline)) }
+            ) { Box(Modifier.size(width = 72.dp, height = 6.dp).clip(RoundedCornerShape(50)).background(cs.onSurfaceVariant.copy(alpha = 0.6f))) }
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box {

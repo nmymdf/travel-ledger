@@ -62,7 +62,7 @@ PLAYWRIGHT_DIR=/opt/node-tools/node_modules node docs/manual/build.mjs  # 說明
 
 ## 目前狀態(更新時改這裡)
 
-- Android **v0.10.7**、電腦行程桌 **v1.4**、iPhone **1.0.0**(送審中)。
+- Android **v0.10.8**、電腦行程桌 **v1.4**、iPhone **1.0.0**(送審中)。
 - iPhone 待辦見 `docs/IOS_TODO.md`(其中「非西曆日期錯誤」建議送審前修)。
 - 還沒決定:帳本卡與統計頁「日均」的算法要不要統一。
 - 之前提過、使用者還沒說要做的 Android 功能:自動帶入參考匯率、行程列左右滑、收據自動偵測多種文字、畫布(圈收據金額、手寫便條)、長按圖示「記一筆」、旅行手帳頁、手機版刪除的復原。
